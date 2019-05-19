@@ -4,7 +4,7 @@
 int main()
 {
     window::Window mainWindow = window::Window(800, 600, "Minecraft C++");
-    glClearColor(0.0f, 0.25f, 1.0f, 1.0f);
+    mainWindow.SetClearColor(colors::color("#96e6ff"));
     mainWindow.Run();
     return 0;
 }

@@ -45,6 +45,11 @@ namespace window
             glfwPollEvents();
         }
     }
+    
+    void Window::SetClearColor(colors::color newClearColor)
+    {
+        glClearColor(newClearColor.r, newClearColor.g, newClearColor.b, newClearColor.a);
+    }
 
     void Window::SetTitle(std::string newTitle)
     {

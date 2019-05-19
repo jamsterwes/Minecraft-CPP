@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include "../gfx/colors.hpp"
 
 namespace window
 {
@@ -18,6 +19,7 @@ namespace window
 
         void AddRenderAction(renderFunction action);
         void Run();
+        void SetClearColor(colors::color newClearColor);
         void SetTitle(std::string newTitle);
         void SetSize(int width, int height);
     private:
