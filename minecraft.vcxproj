@@ -22,6 +22,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ItemGroup>
     <ClCompile Include="src/main.cpp" />
+    <ClCompile Include="src/window/window.cpp" />
+    <ClCompile Include="src/gfx/gl_utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Targets" />
 </Project>
