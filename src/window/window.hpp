@@ -18,6 +18,7 @@ namespace window
         ~Window();
 
         void AddRenderAction(renderFunction action);
+        GLFWwindow* GetHandle();
         void Run();
         void SetClearColor(gfx::color newClearColor);
         void SetTitle(std::string newTitle);

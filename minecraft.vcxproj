@@ -27,6 +27,9 @@
     <ClCompile Include="src/gfx/gl_utils.cpp" />
     <ClCompile Include="src/gfx/shaders.cpp" />
     <ClCompile Include="src/gfx/textures.cpp" />
+    <ClCompile Include="src/imgui/imgui_impl_glfw.cpp" />
+    <ClCompile Include="src/imgui/imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src/imgui/imgui_fonts.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

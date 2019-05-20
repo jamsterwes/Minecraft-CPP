@@ -30,6 +30,11 @@ namespace window
     {
         loopActions.push_back(action);
     }
+
+    GLFWwindow* Window::GetHandle()
+    {
+        return this->glfwRef;
+    }
     
     void Window::Run()
     {
