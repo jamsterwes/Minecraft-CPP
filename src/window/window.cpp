@@ -46,7 +46,7 @@ namespace window
         }
     }
     
-    void Window::SetClearColor(colors::color newClearColor)
+    void Window::SetClearColor(gfx::color newClearColor)
     {
         glClearColor(UNPACK_COLOR3(newClearColor), 1.0f);
     }
@@ -68,7 +68,9 @@ namespace window
 
     void Window::CommonConstructor(int width, int height, std::string title)
     {
-        glfwRef = gl::Utils::CreateGLFWWindow(width, height, "Temporary window title...", 4);
+        glfwRef = gfx::Utils::CreateGLFWWindow(width, height, "Temporary window title...", 4);
+        glfwSetWindowUserPointer(glfwRef, (void*)(this));
+        glfwSetFramebufferSizeCallback(glfwRef, frameBufferSizeCallback);
         this->SetSize(width, height);
         this->SetTitle(title);
         loopActions = std::vector<renderFunction>();

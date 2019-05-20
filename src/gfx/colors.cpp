@@ -5,7 +5,7 @@ int hexCoupleToInt(std::string src, int i)
 	return std::stoi(src.substr(i * 2, 2), nullptr, 16);
 }
 
-namespace colors
+namespace gfx
 {
 	color::color(std::string hex)
 	{

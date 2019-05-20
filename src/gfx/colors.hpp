@@ -5,7 +5,7 @@
 #define UNPACK_COLOR3(color) color.r, color.g, color.b
 #define UNPACK_COLOR4(color) color.r, color.g, color.b, color.a
 
-namespace colors
+namespace gfx
 {
 	struct color
 	{

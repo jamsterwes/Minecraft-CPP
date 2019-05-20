@@ -19,7 +19,7 @@ namespace window
 
         void AddRenderAction(renderFunction action);
         void Run();
-        void SetClearColor(colors::color newClearColor);
+        void SetClearColor(gfx::color newClearColor);
         void SetTitle(std::string newTitle);
         void SetSize(int width, int height);
     private:

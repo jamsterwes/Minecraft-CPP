@@ -1,6 +1,6 @@
 #include "gl_utils.hpp"
 
-namespace gl
+namespace gfx
 {
     bool Utils::InitializeGLFW()
     {
