@@ -48,7 +48,7 @@ namespace window
     
     void Window::SetClearColor(colors::color newClearColor)
     {
-        glClearColor(newClearColor.r, newClearColor.g, newClearColor.b, newClearColor.a);
+        glClearColor(UNPACK_COLOR3(newClearColor), 1.0f);
     }
 
     void Window::SetTitle(std::string newTitle)

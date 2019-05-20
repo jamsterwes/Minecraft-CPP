@@ -2,6 +2,9 @@
 #include <glad\glad.h>
 #include <string>
 
+#define UNPACK_COLOR3(color) color.r, color.g, color.b
+#define UNPACK_COLOR4(color) color.r, color.g, color.b, color.a
+
 namespace colors
 {
 	struct color
