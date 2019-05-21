@@ -12,7 +12,7 @@ namespace gfx
 		const char* texturePath;
 
 		texture2D(const char* filePath) : texturePath(filePath) {}
-		void load(bool repeat = true);
+		void load(bool repeat = false);
 		void slot(GLenum slot);
 	};
 

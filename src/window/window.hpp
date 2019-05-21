@@ -23,11 +23,12 @@ namespace window
         void SetClearColor(gfx::color newClearColor);
         void SetTitle(std::string newTitle);
         void SetSize(int width, int height);
+        // Make getter later
+        int width, height;
     private:
         void CommonConstructor(int width, int height, std::string title);
 
         GLFWwindow* glfwRef;
-        int width, height;
         std::vector<renderFunction> loopActions;
     };
 }

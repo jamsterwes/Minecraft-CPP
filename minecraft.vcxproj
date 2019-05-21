@@ -23,6 +23,7 @@
   <ItemGroup>
     <ClCompile Include="src/main.cpp" />
     <ClCompile Include="src/window/window.cpp" />
+    <ClCompile Include="src/gfx/camera.cpp" />
     <ClCompile Include="src/gfx/colors.cpp" />
     <ClCompile Include="src/gfx/gl_utils.cpp" />
     <ClCompile Include="src/gfx/shaders.cpp" />

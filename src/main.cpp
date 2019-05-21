@@ -1,5 +1,6 @@
 #include <glad/glad.h>
 
+#include "gfx/camera.hpp"
 #include "gfx/iv_buffer.hpp"
 #include "gfx/shaders.hpp"
 #include "gfx/textures.hpp"
@@ -7,10 +8,14 @@
 #include "window/window.hpp"
 
 #include <imgui.h>
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "imgui/imgui_impl_glfw.hpp"
+#include "imgui/imgui_impl_opengl3.hpp"
 #include "imgui/imgui_fonts.hpp"
 
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+gfx::camera* cam;
 gfx::iv_buffer<>* cube;
 gfx::shader* cubeShader;
 gfx::texture2D* atlas;
@@ -30,6 +35,9 @@ void loadAssets(GLFWwindow* window)
     cubeShader = new gfx::shader("shaders/cube.vs", "shaders/cube.fs");
     cubeShader->compile();
     cubeShader->setTexture("Atlas", 0);
+
+    // Camera
+    cam = new gfx::camera(60);
 
     // Textures
     atlas = new gfx::texture2D("res/atlas.png");
@@ -59,26 +67,39 @@ void UI_EndFrame()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
+window::Window *mainWindow;
+
 const char* blockNames[]{
     "Dirt", "Grass", "Stone", "No Block"
 };
 int AtlasIDX = 0;
 int BreakIDX = 0;
+glm::vec3 rotation = glm::vec3(0.0f);
 int main()
 {
-    window::Window mainWindow = window::Window(800, 600, "Minecraft C++");
+    mainWindow = new window::Window(800, 600, "Minecraft C++");
     
-    loadAssets(mainWindow.GetHandle());
+    loadAssets(mainWindow->GetHandle());
 
-    mainWindow.AddRenderAction([&](GLFWwindow* window) {
+    glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
+
+    mainWindow->AddRenderAction([&](GLFWwindow* window) {
         cubeShader->use();
-        cubeShader->setInt("AtlasIDX", AtlasIDX);
+        cubeShader->setVector("AtlasIDX", glm::vec2(AtlasIDX, 0));
         cubeShader->setInt("BreakIDX", BreakIDX);
         atlas->slot(GL_TEXTURE0);
+        cam->recalculate(cubeShader);
+
+        // Model matrix
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::eulerAngleXYZ(rotation.x, rotation.y, rotation.z) * model;
+        cubeShader->setMatrix("model", model);
+
         cube->Draw(GL_UNSIGNED_INT);
     });
 
-    mainWindow.AddRenderAction([&](GLFWwindow* window) {
+    mainWindow->AddRenderAction([&](GLFWwindow* window) {
         UI_BeginFrame();
 
         fontHandler->use("Roboto", 14.f);
@@ -86,15 +107,20 @@ int main()
         ImGui::Combo("Type", &AtlasIDX, blockNames, IM_ARRAYSIZE(blockNames));
         ImGui::SliderInt("Break", &BreakIDX, 0, 7);
         ImGui::End();
+
+        ImGui::Begin("Camera Pos");
+        ImGui::SliderFloat3("Position", glm::value_ptr(cam->camPos), -10.0, 10.0);
+        ImGui::SliderFloat3("Rotation", glm::value_ptr(rotation), -6.28, 0.0);
+        ImGui::End();
         fontHandler->pop_all();
 
         UI_EndFrame();
     });
 
-    mainWindow.SetClearColor(gfx::color("#96e6ff"));
-    mainWindow.Run();
+    mainWindow->SetClearColor(gfx::color("#96e6ff"));
+    mainWindow->Run();
 
-    delete cube, cubeShader, atlas;
+    delete cube, cubeShader, atlas, cam, mainWindow, fontHandler;
 
     return 0;
 }
