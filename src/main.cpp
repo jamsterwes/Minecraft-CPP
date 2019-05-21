@@ -4,6 +4,8 @@
 #include "gfx/iv_buffer.hpp"
 #include "gfx/shaders.hpp"
 #include "gfx/textures.hpp"
+#include "minecraft/chunk.hpp"
+#include "minecraft/simplex1234.hpp"
 #include "models/cube.hpp"
 #include "window/window.hpp"
 
@@ -16,26 +18,23 @@
 #include <glm/gtc/type_ptr.hpp>
 
 gfx::camera* cam;
-gfx::iv_buffer<>* cube;
-gfx::shader* cubeShader;
 gfx::texture2D* atlas;
 fonts::font_handler* fontHandler;
+window::Window *mainWindow;
 
+std::vector<minecraft::Chunk> chunks;
+
+using minecraft::BlockType;
+
+void CleanupPointers()
+{
+    delete cam, atlas, fontHandler, mainWindow;
+}
+
+const int X_CHUNKS = 12;
+const int Z_CHUNKS = 12;
 void loadAssets(GLFWwindow* window)
 {
-    // Buffers
-    cube = new gfx::iv_buffer<>(cube_data::indices, ARRAYSIZE(cube_data::indices), cube_data::vertices, ARRAYSIZE(cube_data::vertices), []() {
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-    });
-
-    // Shaders
-    cubeShader = new gfx::shader("shaders/cube.vs", "shaders/cube.fs");
-    cubeShader->compile();
-    cubeShader->setTexture("Atlas", 0);
-
     // Camera
     cam = new gfx::camera(60);
 
@@ -52,6 +51,40 @@ void loadAssets(GLFWwindow* window)
     fontHandler = new fonts::font_handler({
         {"Roboto", "res/Roboto-Regular.ttf", {14.f}}
     });
+
+    // Chunk
+    chunks = std::vector<minecraft::Chunk>{};
+    for (int xi = 0; xi < X_CHUNKS; xi++)
+    {
+        for (int zi = 0; zi < Z_CHUNKS; zi++)
+        {
+            minecraft::Chunk temp = minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
+            for (int x = 0; x < 16; x++)
+            {
+                int X = x + 16 * xi;
+                for (int z = 0; z < 16; z++)
+                {
+                    int Z = z + 16 * zi;
+                    float n = SimplexNoise1234::noise(
+                        static_cast<float>(X) * 0.01,
+                        static_cast<float>(Z) * 0.01);
+                    float n2 = SimplexNoise1234::noise(
+                        static_cast<float>(X) * 0.005 + 567.0,
+                        static_cast<float>(Z) * 0.005 + 880.0);
+                    int h = 30 + static_cast<int>(20 * n2 * n);
+                    for (int y = h; y >= 0; y--)
+                    {
+                        BlockType type = BlockType::Stone;
+                        if (y == h && SimplexNoise1234::noise(static_cast<float>(X) * 0.125 + 50.0, static_cast<float>(Z) * 0.125 + 50.0) >= -0.25) type = BlockType::Grass;
+                        else if (y >= h - 4) type = BlockType::Dirt;
+                        temp.SetBlockAt(type, x, y, z);
+                    }
+                }
+            }
+            temp.CreateInstanceData();
+            chunks.push_back(temp);
+        }
+    }
 }
 
 void UI_BeginFrame()
@@ -66,8 +99,6 @@ void UI_EndFrame()
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
-
-window::Window *mainWindow;
 
 // --
 
@@ -99,19 +130,17 @@ void Move(glm::vec2 move)
 	cam->camPos += move.y * -forward + move.x * -right;
 }
 
-void CalculateMoveAxis()
+void CalculateMoveAxis(float moveSpeed)
 {
-	if (wHeld) Move(glm::vec2(0.0f, 1.0f));
-	if (sHeld) Move(glm::vec2(0.0f, -1.0f));
-	if (aHeld) Move(glm::vec2(1.0f, 0.0f));
-	if (dHeld) Move(glm::vec2(-1.0f, 0.0f));
+	if (wHeld) Move(glm::vec2(0.0f, moveSpeed));
+	if (sHeld) Move(glm::vec2(0.0f, -moveSpeed));
+	if (aHeld) Move(glm::vec2(moveSpeed, 0.0f));
+	if (dHeld) Move(glm::vec2(-moveSpeed, 0.0f));
 }
 
 // --
 
 unsigned int cubeBuf;
-int SetupCubes();
-
 bool hide = true;
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -155,14 +184,13 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 }
 
-int BreakIDX = 0;
-glm::vec3 rotation = glm::vec3(0.0f);
+gfx::color fogColor = gfx::color("#FFFFFF");
+float fogDensity = 0.001;
 int main()
 {
     mainWindow = new window::Window(800, 600, "Minecraft C++");
     
     loadAssets(mainWindow->GetHandle());
-    int instanceCount = SetupCubes();
 
     glfwSetKeyCallback(mainWindow->GetHandle(), KeyCallback);
 
@@ -171,7 +199,7 @@ int main()
 
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         if (hide) CalculateLookAxis();
-        CalculateMoveAxis();
+        CalculateMoveAxis(0.25f);
     });
 
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
@@ -180,16 +208,13 @@ int main()
         glDisable(GL_MULTISAMPLE);
         glEnable(GL_CULL_FACE);
 
-        cubeShader->use();
-        cubeShader->setInt("BreakIDX", BreakIDX);
-        atlas->slot(GL_TEXTURE0);
-        cam->recalculate(cubeShader);
-
-        // Model matrix
-        glm::mat4 model = glm::mat4(1.0f);
-        cubeShader->setMatrix("model", model);
-
-        cube->Draw(GL_UNSIGNED_INT, instanceCount);
+        for (int i = 0; i < chunks.size(); i++)
+        {
+            cam->recalculate(&(chunks[i].GetShader()));
+            chunks[i].GetShader().setColor("FogColor", fogColor);
+            chunks[i].GetShader().setFloat("FogDensity", fogDensity);
+            chunks[i].Draw(*atlas);
+        }
     });
 
     double previousFrameTime = glfwGetTime();
@@ -197,11 +222,21 @@ int main()
         UI_BeginFrame();
 
         fontHandler->use("Roboto", 14.f);
-        ImGui::Begin("Block Render Props");
+
+        ImGui::Begin("Render Data");
+        long instanceCount = 0;
+        for (int i = 0; i < chunks.size(); i++)
+        {
+            instanceCount += chunks[i].GetInstanceCount();
+        }
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(chunks.size())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(instanceCount)).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
-        ImGui::SliderInt("Break", &BreakIDX, 0, 7);
-        ImGui::SliderFloat3("Rotation", glm::value_ptr(rotation), -6.28, 0.0);
+        ImGui::End();
+
+        ImGui::Begin("Lighting");
+        ImGui::ColorEdit3("Fog Color", (float*)&fogColor);
+        ImGui::SliderFloat("Fog Density", &fogDensity, 0.0, 0.125);
         ImGui::End();
 
         fontHandler->pop_all();
@@ -213,54 +248,7 @@ int main()
     mainWindow->SetClearColor(gfx::color("#96e6ff"));
     mainWindow->Run();
 
-    delete cube, cubeShader, atlas, cam, mainWindow, fontHandler;
+    CleanupPointers();
 
     return 0;
-}
-
-struct cube_inst_data
-{
-    glm::vec3 pos;
-    glm::vec2 uv;
-};
-
-int SetupCubes()
-{
-    std::vector<cube_inst_data> translations;
-    for (int z = 0; z < 128; z++)
-    {
-        for (int x = 0; x < 128; x++)
-        {
-            int h = int(4 * sin(x * 0.125) * cos(z * 0.125)) + 32.0f;
-            translations.push_back({
-                glm::vec3(x, h, z), GRASS
-            });
-            for (int y = h - 1; y > h - 8; y--)
-            {
-                translations.push_back({
-                    glm::vec3(x, y, z), DIRT
-                });
-            }
-            for (int y = h - 8; y > 0; y--)
-            {
-                translations.push_back({
-                    glm::vec3(x, y, z), STONE
-                });
-            }
-        }
-    }
-
-    glBindVertexArray(cube->vaoID);
-    glGenBuffers(1, &cubeBuf);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeBuf);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_inst_data) * translations.size(), &translations[0], GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glEnableVertexAttribArray(3);
-    glVertexAttribDivisor(2, 1);
-    glVertexAttribDivisor(3, 1);
-    glBindVertexArray(0);
-
-    return translations.size();
 }

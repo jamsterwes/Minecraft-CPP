@@ -31,6 +31,8 @@
     <ClCompile Include="src/imgui/imgui_impl_glfw.cpp" />
     <ClCompile Include="src/imgui/imgui_impl_opengl3.cpp" />
     <ClCompile Include="src/imgui/imgui_fonts.cpp" />
+    <ClCompile Include="src/minecraft/chunk.cpp" />
+    <ClCompile Include="src/minecraft/simplex1234.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

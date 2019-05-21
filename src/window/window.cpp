@@ -73,7 +73,7 @@ namespace window
 
     void Window::CommonConstructor(int width, int height, std::string title)
     {
-        glfwRef = gfx::Utils::CreateGLFWWindow(width, height, "Temporary window title...", 8);
+        glfwRef = gfx::Utils::CreateGLFWWindow(width, height, "Temporary window title...", 0);
         glfwSetWindowUserPointer(glfwRef, (void*)(this));
         glfwSetFramebufferSizeCallback(glfwRef, frameBufferSizeCallback);
         this->SetSize(width, height);
