@@ -34,14 +34,16 @@ namespace gfx
             glBindVertexArray(0);
         }
     
-        void Draw(GLenum glIndexType)
+        void Draw(GLenum glIndexType, int instanceCount)
         {
             glBindVertexArray(this->vaoID);
-            glDrawElements(GL_TRIANGLES, this->indexCount, glIndexType, 0);
+            glDrawElementsInstanced(GL_TRIANGLES, this->indexCount, glIndexType, 0, instanceCount);
             glBindVertexArray(0);
         }
+        
+        unsigned int vaoID;
     private:
-        unsigned int vaoID, vboID, eboID;
+        unsigned int vboID, eboID;
         size_t indexCount;
     };
 }
