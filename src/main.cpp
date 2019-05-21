@@ -184,8 +184,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 }
 
-gfx::color fogColor = gfx::color("#FFFFFF");
-float fogDensity = 0.001;
+gfx::color fogColor = gfx::color("#7DADC4");
+float fogDensity = 0.007;
+gfx::color lightColor = gfx::color("#E8FFFE");
+gfx::color ambientColor = gfx::color("#5A5A5A");
+glm::vec3 lightDir = glm::vec3(64.0f, -110.0f, 64.0f);
+float specularStrength = 1.0f;
 int main()
 {
     mainWindow = new window::Window(800, 600, "Minecraft C++");
@@ -211,6 +215,10 @@ int main()
         for (int i = 0; i < chunks.size(); i++)
         {
             cam->recalculate(&(chunks[i].GetShader()));
+            chunks[i].GetShader().setColor("LightColor", lightColor);
+            chunks[i].GetShader().setColor("AmbientColor", ambientColor);
+            chunks[i].GetShader().setVector("LightDir", lightDir);
+            chunks[i].GetShader().setFloat("SpecularStrength", specularStrength);
             chunks[i].GetShader().setColor("FogColor", fogColor);
             chunks[i].GetShader().setFloat("FogDensity", fogDensity);
             chunks[i].Draw(*atlas);
@@ -235,6 +243,11 @@ int main()
         ImGui::End();
 
         ImGui::Begin("Lighting");
+        ImGui::ColorEdit3("Light Color", (float*)&lightColor);
+        ImGui::ColorEdit3("Ambient Color", (float*)&ambientColor);
+        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightDir), 0.0, 128);
+        ImGui::SliderFloat("Specular Strength", &specularStrength, 0.0, 1.0);
+        ImGui::Separator();
         ImGui::ColorEdit3("Fog Color", (float*)&fogColor);
         ImGui::SliderFloat("Fog Density", &fogDensity, 0.0, 0.125);
         ImGui::End();

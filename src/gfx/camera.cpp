@@ -21,6 +21,7 @@ namespace gfx
 		else shader->setMatrix("view", glm::mat4(glm::mat3(view)));
 		shader->setMatrix("proj", projection);
 		shader->setVector("CameraPos", camPos);
+		shader->setVector("ViewDir", dir);
 		return projection;
 	}
 

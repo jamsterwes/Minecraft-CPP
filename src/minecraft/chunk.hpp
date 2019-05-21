@@ -37,6 +37,8 @@ namespace minecraft
 
         glm::vec3 chunkOffset;
     private:
+        void VertexAttributeProvider();
+
         gfx::iv_buffer<> buffer;
         gfx::shader shader;
         BlockType rawData[16][256][16];
