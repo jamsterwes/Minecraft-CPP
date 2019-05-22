@@ -57,6 +57,7 @@ void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z);
 void genChunks()
 {
     chunks = std::vector<minecraft::Chunk>{};
+    int seed = rand();
     for (int xi = 0; xi < ChunkDim[0]; xi++)
     {
         for (int zi = 0; zi < ChunkDim[1]; zi++)
@@ -68,7 +69,7 @@ void genChunks()
                 for (int z = 0; z < 16; z++)
                 {
                     int Z = z + 16 * zi;
-                    int h = noiseBase + (int)(20.0 * minecraft::WorldGen::FBM(glm::vec2(X, Z), frequency, lacunarity, octaves, bias, upperScale, lowerScale));
+                    int h = noiseBase + (int)(20.0 * minecraft::WorldGen::FBM(glm::vec2(X + seed, Z + seed), frequency, lacunarity, octaves, bias, upperScale, lowerScale));
                     for (int y = h; y >= 0; y--)
                     {
                         float antiTreeProb = 1.0f - treeProb;
