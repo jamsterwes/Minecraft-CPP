@@ -9,7 +9,7 @@ namespace minecraft
 {
     enum class BlockType
     {
-        Air, Grass, Stone, Dirt
+        Air, Grass, Stone, Dirt, Bedrock, Log, Leaves
     };
 
     struct BlockInstanceData

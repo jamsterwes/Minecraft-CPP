@@ -7,12 +7,18 @@ namespace minecraft
     {
         switch (type)
         {
-        case BlockType::Dirt:
-            return glm::vec2(0, 1);
         case BlockType::Grass:
             return glm::vec2(0, 0);
         case BlockType::Stone:
             return glm::vec2(3, 0);
+        case BlockType::Dirt:
+            return glm::vec2(0, 1);
+        case BlockType::Bedrock:
+            return glm::vec2(3, 1);
+        case BlockType::Log:
+            return glm::vec2(0, 2);
+        case BlockType::Leaves:
+            return glm::vec2(3, 2);
         case BlockType::Air:
             return glm::vec2(-1, -1);
         }

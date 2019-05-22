@@ -37,10 +37,14 @@ vec4 Lighting(vec4 inColor)
 
 void main()
 {
-    vec4 block = vec4(texture(Atlas, UV).rgb, 1.0);
+    vec4 blockT = vec4(texture(Atlas, UV).rgb, 1.0);
+
+    // if (blockT.a < 0.1)
+        // discard;
+
     // LIGHTING PASS
-    block = Lighting(block);
+    vec4 block = Lighting(blockT);
     // FOG PASS
     block = mix(FogColor, block, calculateFog());
-    fragColor = block;
+    fragColor = vec4(block.rgb, texture(Atlas, UV).a);
 }

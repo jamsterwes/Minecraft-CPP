@@ -33,6 +33,7 @@
     <ClCompile Include="src/imgui/imgui_fonts.cpp" />
     <ClCompile Include="src/minecraft/chunk.cpp" />
     <ClCompile Include="src/minecraft/simplex1234.cpp" />
+    <ClCompile Include="src/minecraft/worldgen.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

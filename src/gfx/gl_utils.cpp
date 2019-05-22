@@ -34,7 +34,7 @@ namespace gfx
         }
 
         glfwMakeContextCurrent(window);
-        glfwSwapInterval(1);
+        glfwSwapInterval(0);
 
         if (!InitializeGL())
         {
