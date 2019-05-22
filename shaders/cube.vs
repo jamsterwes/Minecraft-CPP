@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec2 texCoord;
@@ -21,8 +21,8 @@ vec2 cheatIndex(vec2 UV, vec2 IDX)
 
 void main()
 {
-    gl_Position = proj * view * model * vec4(position + positionOffset + chunkOffset, 1.0);
     WorldPos = mat3(model) * (position + positionOffset + chunkOffset);
     Normal = mat3(transpose(inverse(model))) * normal;
     UV = cheatIndex(texCoord, atlasIndex);
+    gl_Position = proj * view * model * vec4(position + positionOffset + chunkOffset, 1.0);
 } 

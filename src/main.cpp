@@ -178,7 +178,7 @@ void loadAssets(GLFWwindow* window)
 
     // UI
     ImGui::CreateContext();
-    ImGui_ImplOpenGL3_Init("#version 330 core");
+    ImGui_ImplOpenGL3_Init("#version 430 core");
     ImGui_ImplGlfw_InitForOpenGL(window, false);
 
     // Fonts
