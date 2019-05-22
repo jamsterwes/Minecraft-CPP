@@ -41,6 +41,7 @@ bool compileShader(unsigned int shaderID, const char* filename)
 	const char* shaderSourceC = shaderSource.c_str();
 	glShaderSource(shaderID, 1, &shaderSourceC, NULL);
 	glCompileShader(shaderID);
+
 	return verifyShader(shaderID);
 }
 
@@ -50,6 +51,7 @@ namespace gfx
 	{
 		this->vertFilename = vertFilename;
 		this->fragFilename = fragFilename;
+		MessageBoxA(NULL, (std::string("new shader\n") + vertFilename + fragFilename).c_str(), "Minecraft C++ Shader", MB_OK | MB_ICONINFORMATION);
 	}
 
 	void shader::compile()

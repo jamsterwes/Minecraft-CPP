@@ -8,8 +8,6 @@ in vec3 WorldPos;
 in vec3 Normal;
 uniform vec3 CameraPos;
 uniform vec3 ViewDir;
-uniform float FogDensity;
-uniform vec4 FogColor;
 
 uniform vec3 LightDir;
 uniform vec4 LightColor;

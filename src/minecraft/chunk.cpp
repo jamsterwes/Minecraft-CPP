@@ -24,26 +24,8 @@ namespace minecraft
         }
     }
 
-    void Chunk::VertexAttributeProvider()
-    {
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(2);
-    }
-
-    Chunk::Chunk() : chunkOffset(0.0f, 0.0f, 0.0f), instanceData(), shader("shaders/cube.vs", "shaders/cube.fs")
-    {
-        buffer = gfx::iv_buffer<>(cube_data::indices, ARRAYSIZE(cube_data::indices), cube_data::vertices, ARRAYSIZE(cube_data::vertices), [&]() { Chunk::VertexAttributeProvider(); });
-        shader.compile();
-    }
-    Chunk::Chunk(glm::vec3 chunkOffset) : chunkOffset(chunkOffset), instanceData(), shader("shaders/cube.vs", "shaders/cube.fs")
-    {
-        buffer = gfx::iv_buffer<>(cube_data::indices, ARRAYSIZE(cube_data::indices), cube_data::vertices, ARRAYSIZE(cube_data::vertices), [&]() { Chunk::VertexAttributeProvider(); });
-        shader.compile();
-    }
+    Chunk::Chunk() : chunkOffset(0.0f, 0.0f, 0.0f), instanceData() { }
+    Chunk::Chunk(glm::vec3 chunkOffset) : chunkOffset(chunkOffset), instanceData() { }
 
     void Chunk::CreateInstanceData()
     {
@@ -65,10 +47,16 @@ namespace minecraft
             }
         }
 
-        glBindVertexArray(buffer.vaoID);
         glGenBuffers(1, &instanceDataBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
         glBufferData(GL_ARRAY_BUFFER, sizeof(BlockInstanceData) * instanceData.size(), &instanceData[0], GL_STATIC_DRAW);
+        glBindVertexArray(0);
+    }
+
+    void Chunk::LinkToRenderer(lighting::DeferredRenderer& renderer)
+    {
+        glBindVertexArray(renderer.GetVAO());
+        glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
         glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
         glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(3);
@@ -78,18 +66,18 @@ namespace minecraft
         glBindVertexArray(0);
     }
 
-    void Chunk::Draw(gfx::texture2D& atlas)
-    {
-        shader.use();
+    // void Chunk::Draw(gfx::texture2D& atlas)
+    // {
+    //     shader.use();
 
-        atlas.slot(GL_TEXTURE0);
-        shader.setTexture("Atlas", 0);
+    //     atlas.slot(GL_TEXTURE0);
+    //     shader.setTexture("Atlas", 0);
 
-        shader.setVector("chunkOffset", chunkOffset);
-        shader.setMatrix("model", glm::mat4(1.0f));
+    //     shader.setVector("chunkOffset", chunkOffset);
+    //     shader.setMatrix("model", glm::mat4(1.0f));
 
-        buffer.Draw(GL_UNSIGNED_INT, instanceData.size());
-    }
+    //     buffer.Draw(GL_UNSIGNED_INT, instanceData.size());
+    // }
 
     BlockType Chunk::GetBlockAt(int x, int y, int z)
     {
@@ -106,8 +94,8 @@ namespace minecraft
         return instanceData.size();
     }
 
-    gfx::shader& Chunk::GetShader()
-    {
-        return shader;
-    }
+    // gfx::shader& Chunk::GetShader()
+    // {
+    //     return shader;
+    // }
 }

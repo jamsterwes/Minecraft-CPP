@@ -4,6 +4,7 @@
 #include "../gfx/iv_buffer.hpp"
 #include "../gfx/shaders.hpp"
 #include "../gfx/textures.hpp"
+#include "../lighting/deferred.hpp"
 
 namespace minecraft
 {
@@ -27,20 +28,21 @@ namespace minecraft
         Chunk(glm::vec3 chunkOffset);
 
         void CreateInstanceData();
-        void Draw(gfx::texture2D& atlas);
+        void LinkToRenderer(lighting::DeferredRenderer& renderer);
+        // void Draw(gfx::texture2D& atlas);
 
         BlockType GetBlockAt(int x, int y, int z);
         void SetBlockAt(BlockType type, int x, int y, int z);
 
         long GetInstanceCount();
-        gfx::shader& GetShader();
+        // gfx::shader& GetShader();
 
         glm::vec3 chunkOffset;
     private:
         void VertexAttributeProvider();
 
-        gfx::iv_buffer<> buffer;
-        gfx::shader shader;
+        // gfx::iv_buffer<> buffer;
+        // gfx::shader shader;
         BlockType rawData[16][256][16];
         std::vector<BlockInstanceData> instanceData;
         unsigned int instanceDataBuffer;
