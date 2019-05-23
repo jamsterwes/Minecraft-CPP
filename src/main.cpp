@@ -10,6 +10,7 @@
 #include "lighting/settings.hpp"
 #include "minecraft/chunk.hpp"
 #include "minecraft/worldgen.hpp"
+#include "minecraft/world_renderer.hpp"
 #include "models/cube.hpp"
 #include "window/window.hpp"
 
@@ -55,16 +56,18 @@ float lowerScale = 0.25f;
 int noiseBase = 30;
 float treeProb = 0.0025f;
 
+minecraft::WorldRenderer* worldRenderer;
+
 void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z);
 void genChunks()
 {
-    chunks = std::vector<minecraft::Chunk>{};
+    worldRenderer->ClearChunks();
     int seed = rand();
     for (int xi = 0; xi < ChunkDim[0]; xi++)
     {
         for (int zi = 0; zi < ChunkDim[1]; zi++)
         {
-            minecraft::Chunk temp = minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
+            minecraft::Chunk* temp = new minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
             for (int x = 0; x < 16; x++)
             {
                 int X = x + 16 * xi;
@@ -90,7 +93,7 @@ void genChunks()
                                 int max = h + 7 + treeNoise;
                                 for (int y2 = h + 1; y2 <= max; y2++)
                                 {
-                                    FillTreeLayer(temp, int(max - y2), x, y2, z);
+                                    FillTreeLayer(*temp, int(max - y2), x, y2, z);
                                 }
                                 type = BlockType::Dirt;
                             }
@@ -100,14 +103,15 @@ void genChunks()
                             }
                         }
                         else if (y >= h - 6) type = BlockType::Dirt;
-                        temp.SetBlockAt(type, x, y, z);
+                        temp->SetBlockAt(type, x, y, z);
                     }
                 }
             }
-            temp.CreateInstanceData();
-            chunks.push_back(temp);
+            worldRenderer->RegisterChunk(*temp);
+            delete temp;
         }
     }
+    worldRenderer->CreateInstanceData();
 }
 
 void FillTreeLayer2n3(minecraft::Chunk& chunk, int x, int y, int z);
@@ -188,7 +192,8 @@ void loadAssets(GLFWwindow* window)
         {"Roboto", "res/Roboto-Regular.ttf", {14.f}}
     });
 
-    // Chunk
+    // Chunks/World
+    worldRenderer = new minecraft::WorldRenderer();
     genChunks();
 }
 
@@ -338,10 +343,7 @@ int main()
         // Clear G-Buffer
         renderer->ClearGBuffer();
         // Render all chunks
-        for (int i = 0; i < chunks.size(); i++)
-        {
-            renderer->RenderChunk(chunks[i], *cam);
-        }
+        renderer->RenderWorld(*worldRenderer, *cam);
         // Render lighting to screen
         mainWindow->SetClearColor(skyColor);
         renderer->RenderToScreen(*cam, *lightSettings);
@@ -355,19 +357,14 @@ int main()
         fontHandler->use("Roboto", 14.f);
 
         ImGui::Begin("Render Data");
-        long instanceCount = 0;
-        for (int i = 0; i < chunks.size(); i++)
-        {
-            instanceCount += chunks[i].GetInstanceCount();
-        }
-        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(chunks.size())).c_str());
-        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(instanceCount)).c_str());
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(worldRenderer->GetChunkCount())).c_str());
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(worldRenderer->GetInstanceCount())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
         ImGui::End();
 
         ImGui::Begin("Lighting");
         ImGui::ColorEdit3("Light Color", (float*)&(lightSettings->LightColor));
-        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightSettings->LightDir), 0.0, 128);
+        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightSettings->LightDir), -128.0, 128);
         ImGui::Separator();
         ImGui::ColorEdit3("Fog Color", (float*)&(lightSettings->FogColor));
         ImGui::SliderFloat("Fog Density", &(lightSettings->FogDensity), 0.0, 0.125);
@@ -386,7 +383,7 @@ int main()
         ImGui::Separator();
         ImGui::Text("World Properties");
         ImGui::SliderInt("Base Height", &noiseBase, 15, 64);
-        ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 32);
+        ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 64);
         ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
         ImGui::Separator();
         if (ImGui::Button("Regenerate World")) genChunks();

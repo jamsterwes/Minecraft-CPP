@@ -1,5 +1,8 @@
 #include "chunk.hpp"
 #include "../models/cube.hpp"
+#include <algorithm>
+#include <iostream>
+#include <cstdlib>
 
 namespace minecraft
 {
@@ -24,78 +27,67 @@ namespace minecraft
         }
     }
 
-    Chunk::Chunk() : chunkOffset(0.0f, 0.0f, 0.0f), instanceData() { }
-    Chunk::Chunk(glm::vec3 chunkOffset) : chunkOffset(chunkOffset), instanceData() { }
+    Chunk::Chunk() : chunkOffset(0.0f, 0.0f, 0.0f) {
+        rawData = (BlockType*)calloc(16 * 256 * 16, sizeof(BlockType));
+    }
+    Chunk::Chunk(glm::vec3 chunkOffset) : chunkOffset(chunkOffset) {
+        rawData = (BlockType*)calloc(16 * 256 * 16, sizeof(BlockType));
+    }
 
-    void Chunk::CreateInstanceData()
+    void Chunk::CreateInstanceData(std::vector<BlockInstanceData>& worldBin)
     {
-        instanceData = std::vector<BlockInstanceData>();
+        int minHeight = std::max(0, Chunk::GetLowestSurface() - 2);
         for (int x = 0; x < 16; x++)
         {
-            for (int y = 0; y < 256; y++)
+            for (int y = minHeight; y < 256; y++)
             {
                 for (int z = 0; z < 16; z++)
                 {
-                    if (rawData[x][y][z] != BlockType::Air)
+                    if (rawData[RAW_DATA_INDEX(x, y, z)] != BlockType::Air)
                     {
-                        instanceData.push_back({
-                            glm::vec3(x, y, z),
-                            BlockInstanceData::BlockTypeToUV(rawData[x][y][z])
+                        worldBin.push_back({
+                            glm::vec3(x, y, z) + chunkOffset,
+                            BlockInstanceData::BlockTypeToUV(rawData[RAW_DATA_INDEX(x, y, z)])
                         });
                     }
                 }
             }
         }
-
-        glGenBuffers(1, &instanceDataBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(BlockInstanceData) * instanceData.size(), &instanceData[0], GL_STATIC_DRAW);
-        glBindVertexArray(0);
     }
 
-    void Chunk::LinkToRenderer(lighting::DeferredRenderer& renderer)
+    std::string XZString(glm::vec3 vec)
     {
-        glBindVertexArray(renderer.GetVAO());
-        glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(3);
-        glEnableVertexAttribArray(4);
-        glVertexAttribDivisor(3, 1);
-        glVertexAttribDivisor(4, 1);
-        glBindVertexArray(0);
+        return "(" + std::to_string(vec.r) + ", " + std::to_string(vec.b) + ")";
     }
 
-    // void Chunk::Draw(gfx::texture2D& atlas)
-    // {
-    //     shader.use();
-
-    //     atlas.slot(GL_TEXTURE0);
-    //     shader.setTexture("Atlas", 0);
-
-    //     shader.setVector("chunkOffset", chunkOffset);
-    //     shader.setMatrix("model", glm::mat4(1.0f));
-
-    //     buffer.Draw(GL_UNSIGNED_INT, instanceData.size());
-    // }
+    int Chunk::GetLowestSurface()
+    {
+        int minHeight = 255;
+        for (int x = 0; x < 16; x++)
+        {
+            for (int z = 0; z < 16; z++)
+            {
+                for (int y = 255; y >= 0; y--)
+                {
+                    if (rawData[RAW_DATA_INDEX(x, y, z)] != BlockType::Air)
+                    {
+                        if (y < minHeight) minHeight = y;
+                        break;
+                    }
+                }
+            }
+        }
+        std::cout << "min height for chunk " << XZString(chunkOffset) << ": " << minHeight << std::endl;
+        return minHeight;
+    }
 
     BlockType Chunk::GetBlockAt(int x, int y, int z)
     {
-        return rawData[x][y][z];
+        return rawData[RAW_DATA_INDEX(x, y, z)];
     }
 
     void Chunk::SetBlockAt(BlockType type, int x, int y, int z)
     {
-        rawData[x][y][z] = type;
+        rawData[RAW_DATA_INDEX(x, y, z)] = type;
     }
-
-    long Chunk::GetInstanceCount()
-    {
-        return instanceData.size();
-    }
-
-    // gfx::shader& Chunk::GetShader()
-    // {
-    //     return shader;
-    // }
 }

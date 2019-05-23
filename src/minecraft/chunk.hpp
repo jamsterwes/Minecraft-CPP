@@ -6,9 +6,11 @@
 #include "../gfx/textures.hpp"
 #include "../lighting/deferred.hpp"
 
+#define RAW_DATA_INDEX(x, y, z) x + y * 256 + z * 16
+
 namespace minecraft
 {
-    enum class BlockType
+    enum class BlockType : char
     {
         Air, Grass, Stone, Dirt, Bedrock, Log, Leaves
     };
@@ -27,24 +29,15 @@ namespace minecraft
         Chunk();
         Chunk(glm::vec3 chunkOffset);
 
-        void CreateInstanceData();
-        void LinkToRenderer(lighting::DeferredRenderer& renderer);
-        // void Draw(gfx::texture2D& atlas);
+        void CreateInstanceData(std::vector<BlockInstanceData>& worldBin);
+
+        int GetLowestSurface();
 
         BlockType GetBlockAt(int x, int y, int z);
         void SetBlockAt(BlockType type, int x, int y, int z);
 
-        long GetInstanceCount();
-        // gfx::shader& GetShader();
-
         glm::vec3 chunkOffset;
     private:
-        void VertexAttributeProvider();
-
-        // gfx::iv_buffer<> buffer;
-        // gfx::shader shader;
-        BlockType rawData[16][256][16];
-        std::vector<BlockInstanceData> instanceData;
-        unsigned int instanceDataBuffer;
+        BlockType* rawData;  // REPLACE WITH OCTREE ONE DAY?
     };
 }

@@ -9,7 +9,7 @@
 
 namespace minecraft
 {
-    class Chunk;
+    class WorldRenderer;
 }
 
 namespace lighting
@@ -22,12 +22,12 @@ namespace lighting
 
         unsigned int GetVAO();
         void ClearGBuffer();
-        void RenderChunk(minecraft::Chunk& chunk, gfx::camera& cam);
+        void RenderWorld(minecraft::WorldRenderer& world, gfx::camera& cam);
         void RenderToScreen(gfx::camera& cam, LightingSettings lightSettings);
         void Resize(int width, int height);
     private:
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
-        void GBufferPass(minecraft::Chunk& chunk);
+        void GBufferPass(minecraft::WorldRenderer& world);
 
         // G-Buffer
         unsigned int gBuffer;

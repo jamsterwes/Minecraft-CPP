@@ -1,6 +1,6 @@
 #include "deferred.hpp"
 #include "../models/cube.hpp"
-#include "../minecraft/chunk.hpp"
+#include "../minecraft/world_renderer.hpp"
 #include <glm/gtx/transform.hpp>
 
 namespace lighting
@@ -56,11 +56,10 @@ namespace lighting
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void DeferredRenderer::RenderChunk(minecraft::Chunk& chunk, gfx::camera& cam)
+    void DeferredRenderer::RenderWorld(minecraft::WorldRenderer& world, gfx::camera& cam)
     {
         cam.recalculate(gBufferShader);
-        chunk.LinkToRenderer(*this);
-        GBufferPass(chunk);
+        GBufferPass(world);
     }
     
     void DeferredRenderer::RenderToScreen(gfx::camera& cam, LightingSettings lightSettings)
@@ -97,7 +96,7 @@ namespace lighting
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepthStencil);
     }
 
-    void DeferredRenderer::GBufferPass(minecraft::Chunk& chunk)
+    void DeferredRenderer::GBufferPass(minecraft::WorldRenderer& world)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         glDepthMask(true);
@@ -107,12 +106,12 @@ namespace lighting
 
         gBufferShader->use();
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, chunk.chunkOffset);
         gBufferShader->setMatrix("model", model);
         gBufferShader->setTexture("Atlas", 0);
 
         atlas->slot(GL_TEXTURE0);
-        cubeModel->DrawInstanced(GL_UNSIGNED_INT, chunk.GetInstanceCount());
+        world.LinkToRenderer(*this);
+        cubeModel->DrawInstanced(GL_UNSIGNED_INT, world.GetInstanceCount());
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
