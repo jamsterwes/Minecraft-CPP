@@ -5,6 +5,7 @@
 #include "../gfx/iv_buffer.hpp"
 #include "../gfx/shaders.hpp"
 #include "../gfx/textures.hpp"
+#include "../post/fs_quad.hpp"
 
 namespace minecraft
 {
@@ -20,12 +21,13 @@ namespace lighting
         ~DeferredRenderer();
 
         unsigned int GetVAO();
-        void RenderChunk(minecraft::Chunk& chunk, gfx::camera& cam, LightingSettings lightSettings);
+        void ClearGBuffer();
+        void RenderChunk(minecraft::Chunk& chunk, gfx::camera& cam);
+        void RenderToScreen(gfx::camera& cam, LightingSettings lightSettings);
         void Resize(int width, int height);
     private:
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
         void GBufferPass(minecraft::Chunk& chunk);
-        void LightingPass(LightingSettings lightSettings);
 
         // G-Buffer
         unsigned int gBuffer;
@@ -36,5 +38,6 @@ namespace lighting
         gfx::shader* lightingShader;
         gfx::iv_buffer<>* cubeModel;
         gfx::texture2D* atlas;
+        post::FSQuad* quad;
     };
 }

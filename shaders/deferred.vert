@@ -20,7 +20,7 @@ vec2 cheatIndex(vec2 UV, vec2 IDX)
 
 void main()
 {
-    WorldPos = mat3(model) * (position + positionOffset);
+    WorldPos = (model * vec4(position + positionOffset, 1.0)).rgb;
     Normal = mat3(transpose(inverse(model))) * normal;
     UV = cheatIndex(texCoord, atlasIndex);
     gl_Position = proj * view * model * vec4(position + positionOffset, 1.0);

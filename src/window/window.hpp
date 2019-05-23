@@ -9,6 +9,7 @@ namespace window
 {
     typedef std::function<void(GLFWwindow* window, int key, int action, int mods)> keyFunction;
     typedef std::function<void(GLFWwindow* window)> renderFunction;
+    typedef std::function<void(int width, int height)> resizeFunction;
 
     class Window
     {
@@ -18,6 +19,7 @@ namespace window
         ~Window();
 
         void AddRenderAction(renderFunction action);
+        void AddResizeAction(resizeFunction action);
         GLFWwindow* GetHandle();
         void Run();
         void SetClearColor(gfx::color newClearColor);
@@ -30,5 +32,6 @@ namespace window
 
         GLFWwindow* glfwRef;
         std::vector<renderFunction> loopActions;
+        std::vector<resizeFunction> resizeActions;
     };
 }

@@ -44,7 +44,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {1, 1};
+int ChunkDim[2] = {12, 12};
 
 int octaves = 8;
 float frequency = 0.01;
@@ -179,14 +179,14 @@ void loadAssets(GLFWwindow* window)
     atlas->load();
 
     // UI
-    // ImGui::CreateContext();
-    // ImGui_ImplOpenGL3_Init("#version 430 core");
-    // ImGui_ImplGlfw_InitForOpenGL(window, false);
+    ImGui::CreateContext();
+    ImGui_ImplOpenGL3_Init("#version 430 core");
+    ImGui_ImplGlfw_InitForOpenGL(window, false);
 
     // Fonts
-    // fontHandler = new fonts::font_handler({
-    //     {"Roboto", "res/Roboto-Regular.ttf", {14.f}}
-    // });
+    fontHandler = new fonts::font_handler({
+        {"Roboto", "res/Roboto-Regular.ttf", {14.f}}
+    });
 
     // Chunk
     genChunks();
@@ -299,6 +299,8 @@ void InitLightingSettings()
     lightSettings->FogDensity = 0.007;
 }
 
+gfx::color skyColor("#96e6ff");
+
 lighting::DeferredRenderer* renderer;
 void InitRenderer()
 {
@@ -316,8 +318,11 @@ int main()
     glfwSetKeyCallback(mainWindow->GetHandle(), KeyCallback);
 	glfwSetInputMode(mainWindow->GetHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    chunks[0].LinkToRenderer(*renderer);
     cam->camPos = glm::vec3(5.0f, 60.0f, 5.0f);
+
+    mainWindow->AddResizeAction([&](int width, int height) {
+        renderer->Resize(width, height);
+    });
 
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         if (hide) CalculateLookAxis();
@@ -327,62 +332,71 @@ int main()
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
-
         glDisable(GL_MULTISAMPLE);
 
         mainWindow->SetClearColor(gfx::color("#000000"));
-        renderer->RenderChunk(chunks[0], *cam, *lightSettings);
-        mainWindow->SetClearColor(gfx::color("#96e6ff"));
+        // Clear G-Buffer
+        renderer->ClearGBuffer();
+        // Render all chunks
+        for (int i = 0; i < chunks.size(); i++)
+        {
+            renderer->RenderChunk(chunks[i], *cam);
+        }
+        // Render lighting to screen
+        mainWindow->SetClearColor(skyColor);
+        renderer->RenderToScreen(*cam, *lightSettings);
     });
 
     // GUI
-    // double previousFrameTime = glfwGetTime();
-    // mainWindow->AddRenderAction([&](GLFWwindow* window) {
-    //     UI_BeginFrame();
+    double previousFrameTime = glfwGetTime();
+    mainWindow->AddRenderAction([&](GLFWwindow* window) {
+        UI_BeginFrame();
 
-    //     fontHandler->use("Roboto", 14.f);
+        fontHandler->use("Roboto", 14.f);
 
-    //     ImGui::Begin("Render Data");
-    //     long instanceCount = 0;
-    //     for (int i = 0; i < chunks.size(); i++)
-    //     {
-    //         instanceCount += chunks[i].GetInstanceCount();
-    //     }
-    //     ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(chunks.size())).c_str());
-    //     ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(instanceCount)).c_str());
-    //     ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
-    //     ImGui::End();
+        ImGui::Begin("Render Data");
+        long instanceCount = 0;
+        for (int i = 0; i < chunks.size(); i++)
+        {
+            instanceCount += chunks[i].GetInstanceCount();
+        }
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(chunks.size())).c_str());
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(instanceCount)).c_str());
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
+        ImGui::End();
 
-    //     ImGui::Begin("Lighting");
-    //     ImGui::ColorEdit3("Light Color", (float*)&(lightSettings->LightColor));
-    //     ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightSettings->LightDir), 0.0, 128);
-    //     ImGui::Separator();
-    //     ImGui::ColorEdit3("Fog Color", (float*)&(lightSettings->FogColor));
-    //     ImGui::SliderFloat("Fog Density", &(lightSettings->FogDensity), 0.0, 0.125);
-    //     ImGui::End();
+        ImGui::Begin("Lighting");
+        ImGui::ColorEdit3("Light Color", (float*)&(lightSettings->LightColor));
+        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightSettings->LightDir), 0.0, 128);
+        ImGui::Separator();
+        ImGui::ColorEdit3("Fog Color", (float*)&(lightSettings->FogColor));
+        ImGui::SliderFloat("Fog Density", &(lightSettings->FogDensity), 0.0, 0.125);
+        ImGui::Separator();
+        ImGui::ColorEdit3("Sky Color", (float*)(&skyColor));
+        ImGui::End();
 
-    //     ImGui::Begin("World Gen");
-    //     ImGui::Text("Noise Properties");
-    //     ImGui::SliderInt("Octaves", &octaves, 1, 20);
-    //     ImGui::SliderFloat("Frequency", &frequency, 0.0, 0.005, "%.6f");
-    //     ImGui::SliderFloat("Lacunarity", &lacunarity, 0.0, 0.05);
-    //     ImGui::SliderFloat("Bias", &bias, -1.0, 0.0);
-    //     ImGui::SliderFloat("Upper Scale", &upperScale, 0.0, 2.0);
-    //     ImGui::SliderFloat("Lower Scale", &lowerScale, 0.0, 2.0);
-    //     ImGui::Separator();
-    //     ImGui::Text("World Properties");
-    //     ImGui::SliderInt("Base Height", &noiseBase, 15, 64);
-    //     ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 32);
-    //     ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
-    //     ImGui::Separator();
-    //     if (ImGui::Button("Regenerate World")) genChunks();
-    //     ImGui::End();
+        ImGui::Begin("World Gen");
+        ImGui::Text("Noise Properties");
+        ImGui::SliderInt("Octaves", &octaves, 1, 20);
+        ImGui::SliderFloat("Frequency", &frequency, 0.0, 0.005, "%.6f");
+        ImGui::SliderFloat("Lacunarity", &lacunarity, 0.0, 0.05);
+        ImGui::SliderFloat("Bias", &bias, -1.0, 0.0);
+        ImGui::SliderFloat("Upper Scale", &upperScale, 0.0, 2.0);
+        ImGui::SliderFloat("Lower Scale", &lowerScale, 0.0, 2.0);
+        ImGui::Separator();
+        ImGui::Text("World Properties");
+        ImGui::SliderInt("Base Height", &noiseBase, 15, 64);
+        ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 32);
+        ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
+        ImGui::Separator();
+        if (ImGui::Button("Regenerate World")) genChunks();
+        ImGui::End();
 
-    //     fontHandler->pop_all();
+        fontHandler->pop_all();
 
-    //     UI_EndFrame();
-    //     previousFrameTime = glfwGetTime();
-    // });
+        UI_EndFrame();
+        previousFrameTime = glfwGetTime();
+    });
 
     mainWindow->Run();
 

@@ -31,6 +31,11 @@ namespace window
         loopActions.push_back(action);
     }
 
+    void Window::AddResizeAction(resizeFunction action)
+    {
+        resizeActions.push_back(action);
+    }
+
     GLFWwindow* Window::GetHandle()
     {
         return this->glfwRef;
@@ -69,6 +74,11 @@ namespace window
         this->width = width;
         this->height = height;
         glViewport(0, 0, width, height);
+
+        for (int i = 0; i < resizeActions.size(); i++)
+        {
+            resizeActions[i](width, height);
+        }
     }
 
     void Window::CommonConstructor(int width, int height, std::string title)
@@ -79,5 +89,6 @@ namespace window
         this->SetSize(width, height);
         this->SetTitle(title);
         loopActions = std::vector<renderFunction>();
+        resizeActions = std::vector<resizeFunction>();
     }
 }

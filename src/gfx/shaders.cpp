@@ -23,12 +23,12 @@ bool verifyShaderProgram(unsigned int programID)
 {
 	int success;
 	char infoLog[512];
-	glGetProgramiv(programID, GL_COMPILE_STATUS, &success);
+	glGetProgramiv(programID, GL_LINK_STATUS, &success);
 	if (!success)
 	{
 		glGetProgramInfoLog(programID, 512, NULL, infoLog);
 		std::string errorMessage(infoLog);
-		errorMessage = "Error linking shader program:\n" + errorMessage;
+		errorMessage = "Error linking shader program:\n" + std::to_string(success) + "\n" + errorMessage;
 		ERROR_MESSAGE(errorMessage.c_str());
 	}
 	return success == 1;
@@ -51,7 +51,6 @@ namespace gfx
 	{
 		this->vertFilename = vertFilename;
 		this->fragFilename = fragFilename;
-		MessageBoxA(NULL, (std::string("new shader\n") + vertFilename + fragFilename).c_str(), "Minecraft C++ Shader", MB_OK | MB_ICONINFORMATION);
 	}
 
 	void shader::compile()
