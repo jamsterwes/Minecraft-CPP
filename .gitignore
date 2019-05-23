@@ -2,4 +2,4 @@ scripts/
 bin/
 obj/
 .vscode/
-.s/
+.vs/
