@@ -25,6 +25,8 @@ namespace lighting
         void RenderWorld(minecraft::WorldRenderer& world, gfx::camera& cam);
         void RenderToScreen(gfx::camera& cam, LightingSettings lightSettings);
         void Resize(int width, int height);
+
+        gfx::shader* lightingShader;
     private:
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
         void GBufferPass(minecraft::WorldRenderer& world);
@@ -35,7 +37,6 @@ namespace lighting
 
         // Instanced Rendering
         gfx::shader* gBufferShader;
-        gfx::shader* lightingShader;
         gfx::iv_buffer<>* cubeModel;
         gfx::texture2D* atlas;
         post::FSQuad* quad;

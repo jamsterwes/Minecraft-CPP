@@ -60,6 +60,16 @@ public:
         }
     }
 
+    bool Contains(DataType t)
+    {
+        if (!divided) return data == t;
+        for (int i = 0; i < 8; i++)
+        {
+            if (children[i].divided ? children[i].Contains(t) : (children[i].data == t)) return true;
+        }
+        return false;
+    }
+
     class Octree<DataType>* GetChild(int x, int y, int z)
     {
         this->Subdivide();

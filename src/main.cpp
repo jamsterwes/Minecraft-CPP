@@ -45,16 +45,16 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {1, 1};
+int ChunkDim[2] = {12, 12};
 
-int octaves = 8;
-float frequency = 0.01;
-float lacunarity = 0.01;
-float bias = -0.24f;
-float upperScale = 0.5f;
-float lowerScale = 0.25f;
+int octaves = 7;
+float frequency = 0.003174;
+float lacunarity = 0.015;
+float bias = -0.493f;
+float upperScale = 0.974f;
+float lowerScale = 0.00f;
 int noiseBase = 30;
-float treeProb = 0.0025f;
+float treeProb = 0.049f;
 bool wireframe = false;
 
 minecraft::WorldRenderer* worldRenderer;
@@ -324,6 +324,9 @@ void InitRenderer()
     renderer = new lighting::DeferredRenderer(mainWindow->width, mainWindow->height);
 }
 
+const char* renderModes = "Lit\0Position (G-Buffer)\0Normal (G-Buffer)\0Albedo (G-Buffer)\0";
+int chosenRenderMode = 0;
+
 int main()
 {
     mainWindow = new window::Window(800, 600, "Minecraft C++");
@@ -342,9 +345,9 @@ int main()
     });
 
     double previousFrameTime = glfwGetTime();
+    double deltaTime = 0.0f;
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         if (hide) CalculateLookAxis();
-        float deltaTime = glfwGetTime() - previousFrameTime;
         CalculateMoveAxis(50.0f * deltaTime);
     });
 
@@ -362,6 +365,7 @@ int main()
         // Render lighting to screen
         mainWindow->SetClearColor(skyColor);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        renderer->lightingShader->setInt("Debug", chosenRenderMode);
         renderer->RenderToScreen(*cam, *lightSettings);
     });
 
@@ -376,6 +380,7 @@ int main()
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(worldRenderer->GetInstanceCount())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
         ImGui::Separator();
+        ImGui::Combo("Render Mode", &chosenRenderMode, renderModes);
         ImGui::Checkbox("Wireframe", &wireframe);
         ImGui::End();
 
@@ -399,7 +404,7 @@ int main()
         ImGui::SliderFloat("Lower Scale", &lowerScale, 0.0, 2.0);
         ImGui::Separator();
         ImGui::Text("World Properties");
-        ImGui::SliderInt("Base Height", &noiseBase, 15, 64);
+        ImGui::SliderInt("Base Height", &noiseBase, 15, 100);
         ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 64);
         ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
         ImGui::Separator();
@@ -409,6 +414,7 @@ int main()
         fontHandler->pop_all();
 
         UI_EndFrame();
+        deltaTime = glfwGetTime() - previousFrameTime;
         previousFrameTime = glfwGetTime();
     });
 

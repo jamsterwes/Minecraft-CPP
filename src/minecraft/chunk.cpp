@@ -45,6 +45,9 @@ namespace minecraft
 
     void Chunk::OctreeToBin(Octree<BlockType>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin)
     {
+        // TODO: REMOVE THIS, HIDES ALL NON-FULL CHUNKS
+        // if (tree.Contains(BlockType::Air)) return;
+
         if (!tree.divided && tree.data == BlockType::Air) return;
         else if (!tree.divided)
         {
