@@ -5,6 +5,7 @@
 #include "../gfx/shaders.hpp"
 #include "../gfx/textures.hpp"
 #include "../lighting/deferred.hpp"
+#include "../octree.hpp"
 
 #define RAW_DATA_INDEX(x, y, z) x + y * 256 + z * 16
 
@@ -19,6 +20,7 @@ namespace minecraft
     {
         glm::vec3 pos;
         glm::vec2 uv;
+        float dimension = 1;
 
         static glm::vec2 BlockTypeToUV(BlockType type);
     };
@@ -28,6 +30,7 @@ namespace minecraft
     public:
         Chunk();
         Chunk(glm::vec3 chunkOffset);
+        ~Chunk();
 
         void CreateInstanceData(std::vector<BlockInstanceData>& worldBin);
 
@@ -35,9 +38,14 @@ namespace minecraft
 
         BlockType GetBlockAt(int x, int y, int z);
         void SetBlockAt(BlockType type, int x, int y, int z);
+        // TODO:
+        void FillRegion(BlockType type, glm::vec3 start, glm::vec3 end);
 
         glm::vec3 chunkOffset;
     private:
-        BlockType* rawData;  // REPLACE WITH OCTREE ONE DAY?
+        void InitOctrees();
+        void OctreeToBin(Octree<BlockType>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin);
+
+        Octree<BlockType>* octrees;
     };
 }

@@ -26,12 +26,15 @@ namespace minecraft
     {
         glBindVertexArray(renderer.GetVAO());
         glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(5 * sizeof(float)));
         glEnableVertexAttribArray(3);
         glEnableVertexAttribArray(4);
+        glEnableVertexAttribArray(6);
         glVertexAttribDivisor(3, 1);
         glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(6, 1);
         glBindVertexArray(0);
     }
 

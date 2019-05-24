@@ -45,7 +45,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {12, 12};
+int ChunkDim[2] = {1, 1};
 
 int octaves = 8;
 float frequency = 0.01;
@@ -55,6 +55,7 @@ float upperScale = 0.5f;
 float lowerScale = 0.25f;
 int noiseBase = 30;
 float treeProb = 0.0025f;
+bool wireframe = false;
 
 minecraft::WorldRenderer* worldRenderer;
 
@@ -67,7 +68,9 @@ void genChunks()
     {
         for (int zi = 0; zi < ChunkDim[1]; zi++)
         {
-            minecraft::Chunk* temp = new minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
+            // REWRITE THIS
+
+            minecraft::Chunk temp = minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
             for (int x = 0; x < 16; x++)
             {
                 int X = x + 16 * xi;
@@ -88,12 +91,13 @@ void genChunks()
                         else if (y < h - 6) type = BlockType::Stone;
                         else if (y == h)
                         {
+                            type = BlockType::Grass;
                             if (CheckProbability(treeProb / 10.0))
                             {
                                 int max = h + 7 + treeNoise;
                                 for (int y2 = h + 1; y2 <= max; y2++)
                                 {
-                                    FillTreeLayer(*temp, int(max - y2), x, y2, z);
+                                    FillTreeLayer(temp, int(max - y2), x, y2, z);
                                 }
                                 type = BlockType::Dirt;
                             }
@@ -103,14 +107,21 @@ void genChunks()
                             }
                         }
                         else if (y >= h - 6) type = BlockType::Dirt;
-                        temp->SetBlockAt(type, x, y, z);
+                        temp.SetBlockAt(type, x, y, z);
                     }
                 }
             }
-            worldRenderer->RegisterChunk(*temp);
-            delete temp;
+            worldRenderer->RegisterChunk(temp);
         }
     }
+    worldRenderer->CreateInstanceData();
+}
+
+void genFakeOctreeChunks()
+{
+    worldRenderer->ClearChunks();
+    minecraft::Chunk temp = minecraft::Chunk();
+    worldRenderer->RegisterChunk(temp);
     worldRenderer->CreateInstanceData();
 }
 
@@ -195,6 +206,7 @@ void loadAssets(GLFWwindow* window)
     // Chunks/World
     worldRenderer = new minecraft::WorldRenderer();
     genChunks();
+    // genFakeOctreeChunks();
 }
 
 void UI_BeginFrame()
@@ -329,9 +341,11 @@ int main()
         renderer->Resize(width, height);
     });
 
+    double previousFrameTime = glfwGetTime();
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         if (hide) CalculateLookAxis();
-        CalculateMoveAxis(0.25f);
+        float deltaTime = glfwGetTime() - previousFrameTime;
+        CalculateMoveAxis(50.0f * deltaTime);
     });
 
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
@@ -343,23 +357,26 @@ int main()
         // Clear G-Buffer
         renderer->ClearGBuffer();
         // Render all chunks
+        glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
         renderer->RenderWorld(*worldRenderer, *cam);
         // Render lighting to screen
         mainWindow->SetClearColor(skyColor);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         renderer->RenderToScreen(*cam, *lightSettings);
     });
 
     // GUI
-    double previousFrameTime = glfwGetTime();
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         UI_BeginFrame();
 
         fontHandler->use("Roboto", 14.f);
 
-        ImGui::Begin("Render Data");
+        ImGui::Begin("Render Debug");
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(worldRenderer->GetChunkCount())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(worldRenderer->GetInstanceCount())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
+        ImGui::Separator();
+        ImGui::Checkbox("Wireframe", &wireframe);
         ImGui::End();
 
         ImGui::Begin("Lighting");
@@ -398,7 +415,7 @@ int main()
     mainWindow->Run();
 
     CleanupPointers();
-    delete renderer, lightSettings;
+    delete renderer, lightSettings, worldRenderer;
 
     return 0;
 }

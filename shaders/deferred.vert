@@ -3,25 +3,24 @@
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec2 texCoord;
 layout (location = 2) in vec3 normal;
+layout (location = 5) in float texCoordOffset;
 layout (location = 3) in vec3 positionOffset;
 layout (location = 4) in vec2 atlasIndex;
+layout (location = 6) in float dimension;
 
-uniform mat4 model, view, proj;
+uniform mat4 view, proj;
 out vec3 WorldPos;
 out vec3 Normal;
 out vec2 UV;
-
-vec2 cheatIndex(vec2 UV, vec2 IDX)
-{
-    vec2 temp = UV;
-    temp *= 0.125;
-    return temp + (IDX * 0.125);
-}
+out vec2 Offset;
+out float Scale;
 
 void main()
 {
-    WorldPos = (model * vec4(position + positionOffset, 1.0)).rgb;
-    Normal = mat3(transpose(inverse(model))) * normal;
-    UV = cheatIndex(texCoord, atlasIndex);
-    gl_Position = proj * view * model * vec4(position + positionOffset, 1.0);
+    WorldPos = (position * dimension) + positionOffset;
+    Normal = normal;
+    UV = texCoord;
+    Offset = 0.125 * (atlasIndex + vec2(texCoordOffset, 0));
+    Scale = 0.125 * dimension;
+    gl_Position = proj * view * vec4(WorldPos, 1.0);
 } 
