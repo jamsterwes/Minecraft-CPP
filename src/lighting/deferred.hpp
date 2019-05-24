@@ -6,6 +6,7 @@
 #include "../gfx/shaders.hpp"
 #include "../gfx/textures.hpp"
 #include "../post/fs_quad.hpp"
+#include "shadow_cam.hpp"
 #include "ssao.hpp"
 
 namespace minecraft
@@ -26,6 +27,8 @@ namespace lighting
         void RenderWorld(minecraft::WorldRenderer& world, gfx::camera& cam);
         void RenderToScreen(gfx::camera& cam, LightingSettings lightSettings);
         void Resize(int width, int height);
+        
+        void ShadowMapPass(minecraft::WorldRenderer& world, ShadowCam& cam);
 
         gfx::shader* lightingShader;
 
@@ -35,6 +38,7 @@ namespace lighting
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
         void GBufferPass(minecraft::WorldRenderer& world);
         void SSAOPass(gfx::camera& cam);
+        void SSAOBlurPass();
 
         // G-Buffer
         unsigned int gBuffer;

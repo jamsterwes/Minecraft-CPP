@@ -324,9 +324,14 @@ void InitRenderer()
     renderer = new lighting::DeferredRenderer(mainWindow->width, mainWindow->height);
 }
 
-const char* renderModes = "Lit\0Position (G-Buffer)\0Normal (G-Buffer)\0Albedo (G-Buffer)\0";
+const char* renderModes = "Lit\0Position (G-Buffer)\0Normal (G-Buffer)\0Albedo (G-Buffer)\0AO (SSAO Pass)\0";
 int chosenRenderMode = 0;
 
+float ssaoRadius = 2.316f;
+float ssaoBias = 0.754f;
+float ssaoPower = 1.0f;
+int ssaoSamples = 16;
+int ssaoBlur = 2;
 int main()
 {
     mainWindow = new window::Window(800, 600, "Minecraft C++");
@@ -362,10 +367,15 @@ int main()
         renderer->ClearGBuffer();
         // Render all chunks
         glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+        renderer->ssao->ssaoShader->setFloat("radius", ssaoRadius);
+        renderer->ssao->ssaoShader->setFloat("bias", ssaoBias);
+        renderer->ssao->ssaoShader->setInt("kernelSize", ssaoSamples);
+        renderer->ssao->ssaoBlurShader->setInt("blurAmount", ssaoBlur);
         renderer->RenderWorld(*worldRenderer, *cam);
         // Render lighting to screen
         mainWindow->SetClearColor(skyColor);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        renderer->lightingShader->setFloat("SSAOPower", ssaoPower);
         renderer->lightingShader->setInt("Debug", chosenRenderMode);
         renderer->RenderToScreen(*cam, *lightSettings);
     });
@@ -393,6 +403,12 @@ int main()
         ImGui::SliderFloat("Fog Density", &(lightSettings->FogDensity), 0.0, 0.125);
         ImGui::Separator();
         ImGui::ColorEdit3("Sky Color", (float*)(&skyColor));
+        ImGui::Separator();
+        ImGui::SliderFloat("SSAO Radius", &ssaoRadius, 0.0, 10.0);
+        ImGui::SliderFloat("SSAO Bias", &ssaoBias, 0.0, 1.0);
+        ImGui::SliderFloat("SSAO Power", &ssaoPower, 0.1, 5.0);
+        ImGui::SliderInt("SSAO Samples", &ssaoSamples, 1, 64);
+        ImGui::SliderInt("SSAO Blur Radius", &ssaoBlur, 1, 8);
         ImGui::End();
 
         ImGui::Begin("World Gen");

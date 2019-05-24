@@ -5,6 +5,7 @@ in vec2 TexCoords;
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
+uniform sampler2D gAO;
 
 uniform vec3 CameraPos;
 uniform vec3 LightDir;
@@ -12,6 +13,8 @@ uniform vec4 LightColor;
 
 uniform float FogDensity;
 uniform vec4 FogColor;
+
+uniform float SSAOPower;
 
 uniform int Debug;
 
@@ -26,10 +29,11 @@ void main()
     vec3 Normal = texture(gNormal, TexCoords).rgb;
     vec3 Albedo = texture(gAlbedoSpec, TexCoords).rgb;
     float Specular = texture(gAlbedoSpec, TexCoords).a;
+    float AO = pow(texture(gAO, TexCoords).r, SSAOPower);
 
     if (Debug == 0)
     {
-        vec3 lighting = Albedo * 0.25;
+        vec3 lighting = Albedo * 0.25 * AO;
         vec3 viewDir = normalize(CameraPos - FragPos);
         vec3 diffuse = max(dot(Normal, -normalize(LightDir)), 0.0) * Albedo * LightColor.rgb;
         lighting += diffuse;
@@ -51,5 +55,9 @@ void main()
     else if (Debug == 3)
     {
         FragColor = vec4(Albedo, 1.0 - texture(gPosition, TexCoords).a);
+    }
+    else if (Debug == 4)
+    {
+        FragColor = vec4(AO, AO, AO, 1.0);
     }
 }

@@ -70,7 +70,9 @@ namespace lighting
     {
         // Render SSAO pass
         SSAOPass(cam);
+        SSAOBlurPass();
         // Render lighting pass
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
@@ -80,10 +82,13 @@ namespace lighting
         glBindTexture(GL_TEXTURE_2D, gNormal);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, ssao->aoBlurBuffer);
         lightingShader->use();
         lightingShader->setTexture("gPosition", 0);
         lightingShader->setTexture("gNormal", 1);
         lightingShader->setTexture("gAlbedoSpec", 2);
+        lightingShader->setTexture("gAO", 3);
         lightingShader->setVector("LightDir", lightSettings.LightDir);
         lightingShader->setColor("LightColor", lightSettings.LightColor);
         lightingShader->setFloat("FogDensity", lightSettings.FogDensity);
@@ -106,6 +111,18 @@ namespace lighting
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepthStencil);
     }
+    
+    void DeferredRenderer::ShadowMapPass(minecraft::WorldRenderer& world, ShadowCam& cam)
+    {
+        glViewport(0, 0, cam.shadowMapResolution, cam.shadowMapResolution);
+        glBindFramebuffer(GL_FRAMEBUFFER, cam.shadowFramebuffer);
+
+        cam.shadowShader->use();
+        cam.shadowShader->setMatrix("lightSpaceMat", cam.GetLightSpace(glm::vec3(64.0f, -110.0f, 64.0f)));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, width, height);
+    }
 
     void DeferredRenderer::GBufferPass(minecraft::WorldRenderer& world)
     {
@@ -123,8 +140,6 @@ namespace lighting
         atlas->slot(GL_TEXTURE0);
         world.LinkToRenderer(*this);
         cubeModel->DrawInstanced(GL_UNSIGNED_INT, world.GetInstanceCount());
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void DeferredRenderer::SSAOPass(gfx::camera& cam)
@@ -149,6 +164,21 @@ namespace lighting
         ssao->ssaoShader->setTexture("gNormal", 1);
         ssao->ssaoShader->setTexture("texNoise", 2);
         quad->Draw();
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void DeferredRenderer::SSAOBlurPass()
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, ssao->blurFramebuffer);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, ssao->aoBuffer);
+        ssao->ssaoBlurShader->use();
+        ssao->ssaoBlurShader->setTexture("ao", 0);
+        quad->Draw();
+        
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
