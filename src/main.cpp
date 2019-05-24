@@ -342,6 +342,7 @@ int main()
 
     mainWindow->AddResizeAction([&](int width, int height) {
         renderer->Resize(width, height);
+        renderer->ssao->Resize(width, height);
     });
 
     double previousFrameTime = glfwGetTime();

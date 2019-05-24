@@ -5,12 +5,12 @@
 
 namespace lighting
 {
-    DeferredRenderer::DeferredRenderer(int width, int height)
+    DeferredRenderer::DeferredRenderer(int width, int height) : width(width), height(height)
     {
         // Init Instanced Rendering
         gBufferShader = new gfx::shader("shaders/deferred.vert", "shaders/deferred.frag");
         gBufferShader->compile();
-        lightingShader = new gfx::shader("shaders/lighting.vert", "shaders/lighting.frag");
+        lightingShader = new gfx::shader("shaders/postPass.vert", "shaders/lighting.frag");
         lightingShader->compile();
         cubeModel = new gfx::iv_buffer<>(cube_data::indices, ARRAYSIZE(cube_data::indices),
                                             cube_data::vertices, ARRAYSIZE(cube_data::vertices), []() {
@@ -39,11 +39,13 @@ namespace lighting
         unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
         glDrawBuffers(3, attachments);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        ssao = new SSAO(width, height);
     }
 
     DeferredRenderer::~DeferredRenderer()
     {
-        delete gBufferShader, lightingShader, cubeModel, atlas, quad;
+        delete gBufferShader, lightingShader, cubeModel, atlas, quad, ssao;
     }
 
     unsigned int DeferredRenderer::GetVAO()
@@ -66,6 +68,9 @@ namespace lighting
     
     void DeferredRenderer::RenderToScreen(gfx::camera& cam, LightingSettings lightSettings)
     {
+        // Render SSAO pass
+        SSAOPass(cam);
+        // Render lighting pass
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
@@ -89,10 +94,14 @@ namespace lighting
 
     void DeferredRenderer::Resize(int width, int height)
     {
+        this->width = width;
+        this->height = height;
+
         CreateTexture(gPosition, width, height, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_COLOR_ATTACHMENT0);
         CreateTexture(gNormal, width, height, GL_RGB16F, GL_RGB, GL_FLOAT, GL_COLOR_ATTACHMENT1);
         CreateTexture(gAlbedoSpec, width, height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, GL_COLOR_ATTACHMENT2);
     
+        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, gDepthStencil);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepthStencil);
@@ -115,6 +124,31 @@ namespace lighting
         world.LinkToRenderer(*this);
         cubeModel->DrawInstanced(GL_UNSIGNED_INT, world.GetInstanceCount());
 
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void DeferredRenderer::SSAOPass(gfx::camera& cam)
+    {
+        cam.recalculate(ssao->ssaoShader);
+        glBindFramebuffer(GL_FRAMEBUFFER, ssao->frameBuffer);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gPosition);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, ssao->noiseTex);
+        ssao->ssaoShader->use();
+        for (int i = 0; i < 64; i++)
+        {
+            std::string uniformName = "Samples[" + std::to_string(i) + "]";
+            ssao->ssaoShader->setVector(uniformName.c_str(), ssao->ssaoKernel[i]);
+        }
+        ssao->ssaoShader->setVector("ScreenSize", glm::vec2(width, height));
+        ssao->ssaoShader->setTexture("gPosition", 0);
+        ssao->ssaoShader->setTexture("gNormal", 1);
+        ssao->ssaoShader->setTexture("texNoise", 2);
+        quad->Draw();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
