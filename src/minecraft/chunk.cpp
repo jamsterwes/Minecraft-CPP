@@ -122,9 +122,9 @@ namespace minecraft
             // Step 1: Check division
             if (!ptr->divided) return ptr->data;
             // Step 2: Pick a child
-            int octX = (x >= c) ? 1 : 0;
-            int octY = (y >= c) ? 1 : 0;
-            int octZ = (z >= c) ? 1 : 0;
+            int octX = (xi >= c) ? 1 : 0; if (xi >= c) xi -= c;
+            int octY = (yi >= c) ? 1 : 0; if (yi >= c) yi -= c;
+            int octZ = (zi >= c) ? 1 : 0; if (zi >= c) zi -= c;
             // Step 3: Update ptr
             ptr = ptr->GetChild(octX, octY, octZ);
             // Step 4: Update c
