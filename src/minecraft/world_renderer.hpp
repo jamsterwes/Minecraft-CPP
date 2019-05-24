@@ -15,7 +15,7 @@ namespace minecraft
         long GetInstanceCount();
     private:
         std::vector<Chunk> chunks;
-        std::vector<BlockInstanceData> instanceData;
+        std::vector<BlockInstanceData>* instanceData;
         unsigned int instanceDataBuffer;
     };
 }

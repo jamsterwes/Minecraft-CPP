@@ -2,7 +2,7 @@
 
 namespace minecraft
 {
-    WorldRenderer::WorldRenderer() : chunks(), instanceData() { }
+    WorldRenderer::WorldRenderer() : chunks() { }
 
     void WorldRenderer::RegisterChunk(Chunk chunk)
     {
@@ -11,15 +11,15 @@ namespace minecraft
 
     void WorldRenderer::CreateInstanceData()
     {
-        instanceData = std::vector<BlockInstanceData>();
+        instanceData = new std::vector<BlockInstanceData>();
         for (int i = 0; i < chunks.size(); i++)
         {
-            chunks[i].CreateInstanceData(instanceData);
+            chunks[i].CreateInstanceData(*instanceData);
         }
 
         glGenBuffers(1, &instanceDataBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(BlockInstanceData) * instanceData.size(), &instanceData[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(BlockInstanceData) * instanceData->size(), instanceData->data(), GL_STATIC_DRAW);
     }
 
     void WorldRenderer::LinkToRenderer(lighting::DeferredRenderer& renderer)
@@ -50,6 +50,6 @@ namespace minecraft
     
     long WorldRenderer::GetInstanceCount()
     {
-        return instanceData.size();
+        return instanceData->size();
     }
 }

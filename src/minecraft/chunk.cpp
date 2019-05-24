@@ -22,7 +22,7 @@ namespace minecraft
             return glm::vec2(0, 2);
         case BlockType::Leaves:
             return glm::vec2(3, 2);
-        case BlockType::Air:
+        default:
             return glm::vec2(-1, -1);
         }
     }
