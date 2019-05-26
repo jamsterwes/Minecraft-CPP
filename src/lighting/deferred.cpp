@@ -70,7 +70,6 @@ namespace lighting
     {
         // Render SSAO pass
         SSAOPass(cam);
-        SSAOBlurPass();
         // Render lighting pass
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -83,7 +82,7 @@ namespace lighting
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
         glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, ssao->aoBlurBuffer);
+        glBindTexture(GL_TEXTURE_2D, ssao->aoBuffer);
         lightingShader->use();
         lightingShader->setTexture("gPosition", 0);
         lightingShader->setTexture("gNormal", 1);
@@ -146,6 +145,7 @@ namespace lighting
     {
         cam.recalculate(ssao->ssaoShader);
         glBindFramebuffer(GL_FRAMEBUFFER, ssao->frameBuffer);
+        glViewport(0, 0, (int)(width / 2), (int)(height / 2));
         glClear(GL_COLOR_BUFFER_BIT);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -159,27 +159,13 @@ namespace lighting
             std::string uniformName = "Samples[" + std::to_string(i) + "]";
             ssao->ssaoShader->setVector(uniformName.c_str(), ssao->ssaoKernel[i]);
         }
-        ssao->ssaoShader->setVector("ScreenSize", glm::vec2(width, height));
+        ssao->ssaoShader->setVector("ScreenSize", glm::vec2((int)(width / 2), (int)(height / 2)));
         ssao->ssaoShader->setTexture("gPosition", 0);
         ssao->ssaoShader->setTexture("gNormal", 1);
         ssao->ssaoShader->setTexture("texNoise", 2);
         quad->Draw();
-        
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    void DeferredRenderer::SSAOBlurPass()
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, ssao->blurFramebuffer);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, ssao->aoBuffer);
-        ssao->ssaoBlurShader->use();
-        ssao->ssaoBlurShader->setTexture("ao", 0);
-        quad->Draw();
-        
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, width, height);
     }
 
     void DeferredRenderer::CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment)

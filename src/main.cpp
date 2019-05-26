@@ -370,7 +370,6 @@ int main()
         renderer->ssao->ssaoShader->setFloat("radius", ssaoRadius);
         renderer->ssao->ssaoShader->setFloat("bias", ssaoBias);
         renderer->ssao->ssaoShader->setInt("kernelSize", ssaoSamples);
-        renderer->ssao->ssaoBlurShader->setInt("blurAmount", ssaoBlur);
         renderer->RenderWorld(*worldRenderer, *cam);
         // Render lighting to screen
         mainWindow->SetClearColor(skyColor);
@@ -408,7 +407,6 @@ int main()
         ImGui::SliderFloat("SSAO Bias", &ssaoBias, 0.0, 1.0);
         ImGui::SliderFloat("SSAO Power", &ssaoPower, 0.1, 5.0);
         ImGui::SliderInt("SSAO Samples", &ssaoSamples, 1, 64);
-        ImGui::SliderInt("SSAO Blur Radius", &ssaoBlur, 1, 8);
         ImGui::End();
 
         ImGui::Begin("World Gen");

@@ -51,7 +51,6 @@ namespace minecraft
         if (!tree.divided && tree.data == BlockType::Air) return;
         else if (!tree.divided)
         {
-            // if (tree.dim == 1) return;
             worldBin.push_back({
                 chunkOffset + offset,
                 BlockInstanceData::BlockTypeToUV(tree.data),

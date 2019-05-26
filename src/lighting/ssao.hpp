@@ -17,8 +17,6 @@ namespace lighting
 
         unsigned int aoBuffer, frameBuffer, noiseTex;
         gfx::shader* ssaoShader;
-        unsigned int aoBlurBuffer, blurFramebuffer;
-        gfx::shader* ssaoBlurShader;
         std::vector<glm::vec3> ssaoKernel;
     private:
         void GenerateBuffers(int width, int height);
