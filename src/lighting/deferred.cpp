@@ -8,7 +8,7 @@ namespace lighting
     DeferredRenderer::DeferredRenderer(int width, int height) : width(width), height(height)
     {
         // Init Instanced Rendering
-        gBufferShader = new gfx::shader("shaders/deferred.vert", "shaders/deferred.frag");
+        gBufferShader = new gfx::shader("shaders/deferredMesh.vert", "shaders/deferred.frag");
         gBufferShader->compile();
         lightingShader = new gfx::shader("shaders/postPass.vert", "shaders/lighting.frag");
         lightingShader->compile();
@@ -60,16 +60,16 @@ namespace lighting
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void DeferredRenderer::RenderWorld(minecraft::WorldRenderer& world, gfx::camera& cam)
+    void DeferredRenderer::RenderWorld(std::function<void()> drawGBuffer, gfx::camera& cam)
     {
         cam.recalculate(gBufferShader);
-        GBufferPass(world);
+        GBufferPass(drawGBuffer);
     }
     
     void DeferredRenderer::RenderToScreen(gfx::camera& cam, LightingSettings lightSettings)
     {
         // Render SSAO pass
-        SSAOPass(cam);
+        // SSAOPass(cam);
         // Render lighting pass
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -123,7 +123,7 @@ namespace lighting
         glViewport(0, 0, width, height);
     }
 
-    void DeferredRenderer::GBufferPass(minecraft::WorldRenderer& world)
+    void DeferredRenderer::GBufferPass(std::function<void()> drawGBuffer)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         glDepthMask(true);
@@ -137,8 +137,10 @@ namespace lighting
         gBufferShader->setTexture("Atlas", 0);
 
         atlas->slot(GL_TEXTURE0);
-        world.LinkToRenderer(*this);
-        cubeModel->DrawInstanced(GL_UNSIGNED_INT, world.GetInstanceCount());
+
+        drawGBuffer();
+        // world.LinkToRenderer(*this);
+        // cubeModel->DrawInstanced(GL_UNSIGNED_INT, world.GetInstanceCount());
     }
 
     void DeferredRenderer::SSAOPass(gfx::camera& cam)

@@ -9,6 +9,7 @@ namespace minecraft
         WorldRenderer();
         void RegisterChunk(Chunk chunk);
         void CreateInstanceData();
+        void CreateInstanceData_CheckFlags(int flags);
         void LinkToRenderer(lighting::DeferredRenderer& renderer);
         void ClearChunks();
         long GetChunkCount();

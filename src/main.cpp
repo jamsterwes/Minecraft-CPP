@@ -9,6 +9,7 @@
 #include "lighting/deferred.hpp"
 #include "lighting/settings.hpp"
 #include "minecraft/chunk.hpp"
+#include "minecraft/mesh_renderer.hpp"
 #include "minecraft/worldgen.hpp"
 #include "minecraft/world_renderer.hpp"
 #include "models/cube.hpp"
@@ -45,7 +46,8 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {12, 12};
+int ChunkDim[2] = {1, 1};
+int chunkCount = ChunkDim[0] * ChunkDim[1];
 
 int octaves = 7;
 float frequency = 0.003174;
@@ -57,72 +59,108 @@ int noiseBase = 30;
 float treeProb = 0.049f;
 bool wireframe = false;
 
+bool px = true, nx = true, py = true, ny = true, pz = true, nz = true;
+
 minecraft::WorldRenderer* worldRenderer;
+std::list<minecraft::MeshRenderer*> meshRenderer;
 
 void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z);
-void genChunks()
+void genChunks(bool worldGen = true)
 {
-    worldRenderer->ClearChunks();
-    int seed = rand();
-    for (int xi = 0; xi < ChunkDim[0]; xi++)
+    int outsideFlags = (px ? (int)minecraft::OutsideFlags::PX : 0) |
+        (nx ? (int)minecraft::OutsideFlags::NX : 0) |
+        (py ? (int)minecraft::OutsideFlags::PY : 0) |
+        (ny ? (int)minecraft::OutsideFlags::NY : 0) |
+        (pz ? (int)minecraft::OutsideFlags::PZ : 0) |
+        (nz ? (int)minecraft::OutsideFlags::NZ : 0);
+    chunkCount = ChunkDim[0] * ChunkDim[1];
+    meshRenderer = std::list<minecraft::MeshRenderer*>{};
+    for (int i = 0; i < chunkCount; i++)
     {
-        for (int zi = 0; zi < ChunkDim[1]; zi++)
+        meshRenderer.push_back(new minecraft::MeshRenderer());
+    }
+    if (worldGen)
+    {
+        worldRenderer->ClearChunks();
+        int seed = rand();
+        auto meshRenderIt = meshRenderer.begin();
+        for (int xi = 0; xi < ChunkDim[0]; xi++)
         {
-            // REWRITE THIS
-
-            minecraft::Chunk temp = minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
-            for (int x = 0; x < 16; x++)
+            for (int zi = 0; zi < ChunkDim[1]; zi++)
             {
-                int X = x + 16 * xi;
-                for (int z = 0; z < 16; z++)
+                minecraft::Chunk* temp = new minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
+                for (int x = 0; x < 16; x++)
                 {
-                    int Z = z + 16 * zi;
-                    int h = noiseBase + (int)(20.0 * minecraft::WorldGen::FBM(glm::vec2(X + seed, Z + seed), frequency, lacunarity, octaves, bias, upperScale, lowerScale));
-                    for (int y = h; y >= 0; y--)
+                    int X = x + 16 * xi;
+                    for (int z = 0; z < 16; z++)
                     {
-                        float antiTreeProb = 1.0f - treeProb;
-                        float bedrockNoise = minecraft::WorldGen::FBM(glm::vec3(X, y, Z), frequency, lacunarity, octaves, 0.0, 1.0, 1.0);
-                        float treeNoise = minecraft::WorldGen::FBM(glm::vec3(X, y, Z), 0.25, lacunarity / 20, 2, 0.0, 1.0, 1.0);
-                        BlockType type = BlockType::Stone;
-                        if (y <= 1 + bedrockNoise * 1)
+                        int Z = z + 16 * zi;
+                        int h = noiseBase + (int)(20.0 * minecraft::WorldGen::FBM(glm::vec2(X + seed, Z + seed), frequency, lacunarity, octaves, bias, upperScale, lowerScale));
+                        for (int y = h; y >= 0; y--)
                         {
-                            type = BlockType::Bedrock;
-                        } 
-                        else if (y < h - 6) type = BlockType::Stone;
-                        else if (y == h)
-                        {
-                            type = BlockType::Grass;
-                            if (CheckProbability(treeProb / 10.0))
+                            float antiTreeProb = 1.0f - treeProb;
+                            float bedrockNoise = minecraft::WorldGen::FBM(glm::vec3(X, y, Z), frequency, lacunarity, octaves, 0.0, 1.0, 1.0);
+                            float treeNoise = minecraft::WorldGen::FBM(glm::vec3(X, y, Z), 0.25, lacunarity / 20, 2, 0.0, 1.0, 1.0);
+                            BlockType type = BlockType::Stone;
+                            if (y <= 1 + bedrockNoise * 1)
                             {
-                                int max = h + 7 + treeNoise;
-                                for (int y2 = h + 1; y2 <= max; y2++)
-                                {
-                                    FillTreeLayer(temp, int(max - y2), x, y2, z);
-                                }
-                                type = BlockType::Dirt;
-                            }
-                            else
+                                type = BlockType::Bedrock;
+                            } 
+                            else if (y < h - 6) type = BlockType::Stone;
+                            else if (y == h)
                             {
                                 type = BlockType::Grass;
+                                if (CheckProbability(treeProb / 10.0))
+                                {
+                                    int max = h + 7 + treeNoise;
+                                    for (int y2 = h + 1; y2 <= max; y2++)
+                                    {
+                                        FillTreeLayer(*temp, int(max - y2), x, y2, z);
+                                    }
+                                    type = BlockType::Dirt;
+                                }
+                                else
+                                {
+                                    type = BlockType::Grass;
+                                }
                             }
+                            else if (y >= h - 6) type = BlockType::Dirt;
+                            temp->SetBlockAt(type, x, y, z);
                         }
-                        else if (y >= h - 6) type = BlockType::Dirt;
-                        temp.SetBlockAt(type, x, y, z);
                     }
                 }
+                worldRenderer->RegisterChunk(*temp);
+                temp->Consolidate();
+                (*meshRenderIt)->AddChunk(*temp, outsideFlags);
+                (*meshRenderIt)->Update();
+                delete temp;
+                meshRenderIt++;
             }
-            worldRenderer->RegisterChunk(temp);
         }
-    }
-    worldRenderer->CreateInstanceData();
+        worldRenderer->CreateInstanceData();
+    }   
+    else
+    {
+        worldRenderer->CreateInstanceData_CheckFlags(
+            (px ? (int)minecraft::OutsideFlags::PX : 0) |
+            (nx ? (int)minecraft::OutsideFlags::NX : 0) |
+            (py ? (int)minecraft::OutsideFlags::PY : 0) |
+            (ny ? (int)minecraft::OutsideFlags::NY : 0) |
+            (pz ? (int)minecraft::OutsideFlags::PZ : 0) |
+            (nz ? (int)minecraft::OutsideFlags::NZ : 0)
+        );
+    } 
 }
 
 void genFakeOctreeChunks()
 {
-    worldRenderer->ClearChunks();
+    chunkCount = ChunkDim[0] * ChunkDim[1];
+    meshRenderer = std::list<minecraft::MeshRenderer*>{};
+    auto meshRenderer0 = new minecraft::MeshRenderer{};
     minecraft::Chunk temp = minecraft::Chunk();
-    worldRenderer->RegisterChunk(temp);
-    worldRenderer->CreateInstanceData();
+    meshRenderer0->AddChunk(temp);
+    meshRenderer0->Update();
+    meshRenderer.push_back(meshRenderer0);
 }
 
 void FillTreeLayer2n3(minecraft::Chunk& chunk, int x, int y, int z);
@@ -162,26 +200,26 @@ void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z)
 
 void FillTreeLayer2n3(minecraft::Chunk& chunk, int x, int y, int z)
 {
-        chunk.SetBlockAt(BlockType::Log, x, y, z);
-        for (int xi = x - 2; xi <= x + 2; xi++)
+    chunk.SetBlockAt(BlockType::Log, x, y, z);
+    for (int xi = x - 2; xi <= x + 2; xi++)
+    {
+        for (int zi = z - 1; zi <= z + 1; zi++)
         {
-            for (int zi = z - 1; zi <= z + 1; zi++)
-            {
-                if (xi < 16 && xi > 0 && zi > 0 && zi < 16) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
-            }
+            if (xi < 16 && xi > 0 && zi > 0 && zi < 16) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
         }
-        for (int xi = x - 1; xi <= x + 1; xi++)
+    }
+    for (int xi = x - 1; xi <= x + 1; xi++)
+    {
+        for (int zi = z - 2; zi <= z + 2; zi++)
         {
-            for (int zi = z - 2; zi <= z + 2; zi++)
-            {
-                if (xi < 16 && xi > 0 && zi > 0 && zi < 16) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
-            }
+            if (xi < 16 && xi > 0 && zi > 0 && zi < 16) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
         }
-        // 50%
-        if (CheckProbability(0.5) && x + 2 < 16 && z + 2 < 16) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z + 2);
-        if (CheckProbability(0.5) && x - 2 > 0 && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z - 2);
-        if (CheckProbability(0.5) && x + 2 < 16 && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z - 2);
-        if (CheckProbability(0.5) && x - 2 > 0 && z + 2 < 16) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z + 2);
+    }
+    // 50%
+    if (CheckProbability(0.5) && x + 2 < 16 && z + 2 < 16) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z + 2);
+    if (CheckProbability(0.5) && x - 2 > 0 && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z - 2);
+    if (CheckProbability(0.5) && x + 2 < 16 && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z - 2);
+    if (CheckProbability(0.5) && x - 2 > 0 && z + 2 < 16) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z + 2);
 }
 
 void loadAssets(GLFWwindow* window)
@@ -370,7 +408,14 @@ int main()
         renderer->ssao->ssaoShader->setFloat("radius", ssaoRadius);
         renderer->ssao->ssaoShader->setFloat("bias", ssaoBias);
         renderer->ssao->ssaoShader->setInt("kernelSize", ssaoSamples);
-        renderer->RenderWorld(*worldRenderer, *cam);
+        renderer->RenderWorld([&]() {
+            auto meshRenderIt = meshRenderer.begin();
+            while (meshRenderIt != meshRenderer.end())
+            {
+                (*meshRenderIt)->Draw();
+                meshRenderIt++;
+            }
+        }, *cam);
         // Render lighting to screen
         mainWindow->SetClearColor(skyColor);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -385,9 +430,16 @@ int main()
 
         fontHandler->use("Roboto", 14.f);
 
+        int indices = 0;
+        auto meshRenderIt = meshRenderer.begin();
+        while (meshRenderIt != meshRenderer.end())
+        {
+            (*meshRenderIt)->chunkData->indexCount;
+            meshRenderIt++;
+        }
+
         ImGui::Begin("Render Debug");
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(worldRenderer->GetChunkCount())).c_str());
-        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#f2ad0e")), 1.0), ("Instances: " + std::to_string(worldRenderer->GetInstanceCount())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
         ImGui::Separator();
         ImGui::Combo("Render Mode", &chosenRenderMode, renderModes);
@@ -424,6 +476,16 @@ int main()
         ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
         ImGui::Separator();
         if (ImGui::Button("Regenerate World")) genChunks();
+        ImGui::End();
+
+        ImGui::Begin("Chunk Draw");
+        ImGui::Checkbox("+X", &px);
+        ImGui::Checkbox("-X", &nx);
+        ImGui::Checkbox("+Y", &py);
+        ImGui::Checkbox("-Y", &ny);
+        ImGui::Checkbox("+Z", &pz);
+        ImGui::Checkbox("-Z", &nz);
+        if (ImGui::Button("Retopo Chunks")) genChunks();
         ImGui::End();
 
         fontHandler->pop_all();

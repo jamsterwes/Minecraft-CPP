@@ -43,17 +43,17 @@ namespace minecraft
         return "(" + std::to_string(vec.r) + ", " + std::to_string(vec.g) + ", " + std::to_string(vec.b) + ")";
     }
 
-    void Chunk::OctreeToBin(Octree<BlockType>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin)
+    void Chunk::OctreeToBin(Octree<BlockChunkData>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin)
     {
         // TODO: REMOVE THIS, HIDES ALL NON-FULL CHUNKS
         // if (tree.Contains(BlockType::Air)) return;
 
-        if (!tree.divided && tree.data == BlockType::Air) return;
+        if (!tree.divided && tree.data.type == BlockType::Air) return;
         else if (!tree.divided)
         {
             worldBin.push_back({
                 chunkOffset + offset,
-                BlockInstanceData::BlockTypeToUV(tree.data),
+                BlockInstanceData::BlockTypeToUV(tree.data.type),
                 static_cast<float>(tree.dim)
             });
         }
@@ -65,11 +65,30 @@ namespace minecraft
                 {
                     for (int z = 0; z < 2; z++)
                     {
-                        Octree<BlockType>& newTree = *(tree.GetChild(x, y, z));
-                        OctreeToBin(newTree, offset + glm::vec3(x, y, z) * glm::vec3(tree.dim / 2), worldBin);
+                        Octree<BlockChunkData>& newTree = *(tree.GetChild(x, y, z));
+                        Octree<BlockChunkData>& newTreeX = *(tree.GetChild((x + 1) % 2, y, z));
+                        Octree<BlockChunkData>& newTreeY = *(tree.GetChild(x, (y + 1) % 2, z));
+                        Octree<BlockChunkData>& newTreeZ = *(tree.GetChild(x, y, (z + 1) % 2));
+                        bool airFound = false;
+                        BlockChunkData air;
+                        air.type == BlockType::Air;
+                        air.outside = 0;
+                        // +x
+                        if (newTreeX.Contains(air)) airFound = true;
+                        if (newTreeY.Contains(air)) airFound = true;
+                        if (newTreeZ.Contains(air)) airFound = true;
+                        if (airFound) OctreeToBin(newTree, offset + glm::vec3(x, y, z) * glm::vec3(tree.dim / 2), worldBin);
                     }
                 }
             }
+        }
+    }
+
+    void Chunk::Consolidate()
+    {
+        for (int i = 15; i >= 0; i--)
+        {
+            octrees[i].Consolidate();
         }
     }
 
@@ -81,6 +100,18 @@ namespace minecraft
             OctreeToBin(octrees[i], glm::vec3(0.0, 16.0 * i, 0.0), worldBin);
         }
     }
+    
+    void Chunk::CreateInstanceData_CheckFlags(std::vector<BlockInstanceData>& worldBin, int flags)
+    {
+        for (int i = 15; i >= 0; i--)
+        {
+            if (octrees[i].data.outside == flags)
+            {
+                octrees[i].Consolidate();
+                OctreeToBin(octrees[i], glm::vec3(0.0, 16.0 * i, 0.0), worldBin);
+            }
+        }
+    }
 
     std::string XZString(glm::vec3 vec)
     {
@@ -89,29 +120,13 @@ namespace minecraft
 
     int Chunk::GetLowestSurface()
     {
-        int minHeight = 255;
-        // for (int x = 0; x < 16; x++)
-        // {
-        //     for (int z = 0; z < 16; z++)
-        //     {
-        //         for (int y = 255; y >= 0; y--)
-        //         {
-        //             if (rawData[RAW_DATA_INDEX(x, y, z)] != BlockType::Air)
-        //             {
-        //                 if (y < minHeight) minHeight = y;
-        //                 break;
-        //             }
-        //         }
-        //     }
-        // }
-        // std::cout << "min height for chunk " << XZString(chunkOffset) << ": " << minHeight << std::endl;
-        return minHeight;
+        return 255;
     }
 
-    BlockType Chunk::GetBlockAt(int x, int y, int z)
+    BlockChunkData Chunk::GetBlockAt(int x, int y, int z)
     {
         int octreeID = floor(y / 16.0);
-        Octree<BlockType>* ptr = &octrees[octreeID % 16];
+        Octree<BlockChunkData>* ptr = &octrees[octreeID % 16];
         int xi = x;
         int yi = (y % 16);
         int zi = z;
@@ -136,7 +151,7 @@ namespace minecraft
     void Chunk::SetBlockAt(BlockType type, int x, int y, int z)
     {
         int octreeID = floor(y / 16.0);
-        Octree<BlockType>* ptr = &octrees[octreeID % 16];
+        Octree<BlockChunkData>* ptr = &octrees[octreeID % 16];
         int xi = x;
         int yi = (y % 16);
         int zi = z;
@@ -153,15 +168,16 @@ namespace minecraft
             if (c > 1) c /= 2;
             else c = 0;
         }
-        ptr->data = type;
+        ptr->data.type = type;
     }
 
     void Chunk::InitOctrees()
     {
-        octrees = new Octree<BlockType>[16];
+        octrees = new Octree<BlockChunkData>[16];
         for (int i = 0; i < 16; i++)
         {
-            octrees[i].data = BlockType::Air;
+            octrees[i].data.outside = 0;
+            octrees[i].data.type = BlockType::Air;
         }
     }
 }

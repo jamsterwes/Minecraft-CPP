@@ -24,7 +24,7 @@ namespace lighting
 
         unsigned int GetVAO();
         void ClearGBuffer();
-        void RenderWorld(minecraft::WorldRenderer& world, gfx::camera& cam);
+        void RenderWorld(std::function<void()> drawGBuffer, gfx::camera& cam);
         void RenderToScreen(gfx::camera& cam, LightingSettings lightSettings);
         void Resize(int width, int height);
         
@@ -36,7 +36,7 @@ namespace lighting
         SSAO* ssao;
     private:
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
-        void GBufferPass(minecraft::WorldRenderer& world);
+        void GBufferPass(std::function<void()> drawGBuffer);
         void SSAOPass(gfx::camera& cam);
 
         // G-Buffer

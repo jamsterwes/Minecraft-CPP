@@ -35,6 +35,7 @@
     <ClCompile Include="src/lighting/shadow_cam.cpp" />
     <ClCompile Include="src/lighting/ssao.cpp" />
     <ClCompile Include="src/minecraft/chunk.cpp" />
+    <ClCompile Include="src/minecraft/mesh_renderer.cpp" />
     <ClCompile Include="src/minecraft/simplex1234.cpp" />
     <ClCompile Include="src/minecraft/worldgen.cpp" />
     <ClCompile Include="src/minecraft/world_renderer.cpp" />

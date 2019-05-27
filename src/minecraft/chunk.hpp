@@ -25,6 +25,25 @@ namespace minecraft
         static glm::vec2 BlockTypeToUV(BlockType type);
     };
 
+    enum class OutsideFlags : int
+    {
+        PX = 1,
+        PY = 2,
+        PZ = 4,
+        NX = 8,
+        NY = 16,
+        NZ = 32
+    };
+
+    struct BlockChunkData
+    {
+        BlockType type;
+        int outside;
+
+        bool operator==(BlockChunkData& rhs) { return (type == rhs.type); }
+        bool operator!=(BlockChunkData& rhs) { return !(*this == rhs); }
+    };
+
     class Chunk
     {
     public:
@@ -33,19 +52,21 @@ namespace minecraft
         ~Chunk();
 
         void CreateInstanceData(std::vector<BlockInstanceData>& worldBin);
+        void CreateInstanceData_CheckFlags(std::vector<BlockInstanceData>& worldBin, int flags);
+
+        void Consolidate();
 
         int GetLowestSurface();
 
-        BlockType GetBlockAt(int x, int y, int z);
+        BlockChunkData GetBlockAt(int x, int y, int z);
         void SetBlockAt(BlockType type, int x, int y, int z);
         // TODO:
         void FillRegion(BlockType type, glm::vec3 start, glm::vec3 end);
 
         glm::vec3 chunkOffset;
+        Octree<BlockChunkData>* octrees;
     private:
         void InitOctrees();
-        void OctreeToBin(Octree<BlockType>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin);
-
-        Octree<BlockType>* octrees;
+        void OctreeToBin(Octree<BlockChunkData>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin);
     };
 }

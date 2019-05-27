@@ -22,6 +22,19 @@ namespace minecraft
         glBufferData(GL_ARRAY_BUFFER, sizeof(BlockInstanceData) * instanceData->size(), instanceData->data(), GL_STATIC_DRAW);
     }
 
+    void WorldRenderer::CreateInstanceData_CheckFlags(int flags)
+    {
+        instanceData = new std::vector<BlockInstanceData>();
+        for (int i = 0; i < chunks.size(); i++)
+        {
+            chunks[i].CreateInstanceData_CheckFlags(*instanceData, flags);
+        }
+
+        glGenBuffers(1, &instanceDataBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, instanceDataBuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(BlockInstanceData) * instanceData->size(), instanceData->data(), GL_STATIC_DRAW);
+    }
+
     void WorldRenderer::LinkToRenderer(lighting::DeferredRenderer& renderer)
     {
         glBindVertexArray(renderer.GetVAO());
