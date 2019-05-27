@@ -10,10 +10,7 @@ namespace minecraft
 
     void MeshRenderer::AddChunk(minecraft::Chunk chunk, int outsideFlags)
     {
-        for (int i = 0; i < 16; i++)
-        {
-            RenderOctree(glm::vec3(0.0, 16 * i, 0.0) + chunk.chunkOffset, &(chunk.octrees[i]), outsideFlags);
-        }
+        RenderOctree(glm::vec3(0.0, 0.0, 0.0) + chunk.chunkOffset, chunk.octree, outsideFlags);
     }
 
     void MeshRenderer::Draw()
@@ -58,22 +55,21 @@ namespace minecraft
     bool MeshRenderer::CheckPlane(Octree<BlockChunkData>* root, glm::vec3 direction)
     {
         if (!root->divided) return root->data.type == BlockType::Air;
-        for (int a = 0; a < 2; a++)
+        for (int x = 0; x < 2; x++)
         {
-            for (int b = 0; b < 2; b++)
+            for (int y = 0; y < 2; y++)
             {
-                bool ax = direction.x == 0.0;
-                bool ay = direction.y == 0.0;
-                int x = (direction.x == 1.0 ? 1 : (direction.x == -1.0 ? 0 : a));
-                int y = (direction.y == 1.0 ? 1 : (direction.y == -1.0 ? 0 : (ax ? b : a)));
-                int z = (direction.z == 1.0 ? 1 : (direction.z == -1.0 ? 0 : ((ax || ay) ? b : a)));
-                edge* node = root->GetChild(x, y, z);
-                bool nodeCheck = false;
-                if (node->divided) nodeCheck = CheckPlane(node, direction);
-                else nodeCheck = node->data.type == BlockType::Air;
-                if (nodeCheck)
+                for (int z = 0; z < 2; z++)
                 {
-                    return true;
+                    if (glm::vec3(2 * x - 1, 2 * y - 1, 2 * z - 1) * direction != direction * direction) continue;
+                    edge* node = root->GetChild(x, y, z);
+                    bool nodeCheck = false;
+                    if (node->divided) nodeCheck = CheckPlane(node, direction);
+                    else nodeCheck = node->data.type == BlockType::Air;
+                    if (nodeCheck)
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -89,8 +85,8 @@ namespace minecraft
         int xi = path.x;
         int yi = path.y;
         int zi = path.z;
-        int c = 8;
-        while (c > res)
+        int c = CHUNK_SIZE / 2;
+        while (c > res / 2)
         {
             if (!ptr->divided) return ptr;
             int octX = (xi >= c) ? 1 : 0; if (xi >= c) xi -= c;
@@ -114,7 +110,7 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.x + direction * node->dim;
-            if (actualD < 0 || actualD > 15) continue;
+            if (actualD <= 0 || actualD >= CHUNK_SIZE - 1) continue;
             glm::vec3 actualPath = glm::vec3(actualD, path.y, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
@@ -124,7 +120,7 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.y + direction * node->dim;
-            if (actualD < 0 || actualD > 15) continue;
+            if (actualD <= 0 || actualD >= CHUNK_SIZE - 1) continue;
             glm::vec3 actualPath = glm::vec3(path.x, actualD, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
@@ -134,7 +130,7 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.z + direction * node->dim;
-            if (actualD < 0 || actualD > 15) continue;
+            if (actualD <= 0 || actualD >= CHUNK_SIZE - 1) continue;
             glm::vec3 actualPath = glm::vec3(path.x, path.y, actualD);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);

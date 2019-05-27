@@ -46,7 +46,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {40, 40};
+int ChunkDim[2] = {2, 2};
 int chunkCount = ChunkDim[0] * ChunkDim[1];
 
 int octaves = 7;
@@ -59,20 +59,11 @@ int noiseBase = 30;
 float treeProb = 0.049f;
 bool wireframe = false;
 
-bool px = true, nx = true, py = true, ny = true, pz = true, nz = true;
-
-minecraft::WorldRenderer* worldRenderer;
 std::list<minecraft::MeshRenderer*> meshRenderer;
 
 void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z);
 void genChunks(bool worldGen = true)
 {
-    int outsideFlags = (px ? (int)minecraft::OutsideFlags::PX : 0) |
-        (nx ? (int)minecraft::OutsideFlags::NX : 0) |
-        (py ? (int)minecraft::OutsideFlags::PY : 0) |
-        (ny ? (int)minecraft::OutsideFlags::NY : 0) |
-        (pz ? (int)minecraft::OutsideFlags::PZ : 0) |
-        (nz ? (int)minecraft::OutsideFlags::NZ : 0);
     chunkCount = ChunkDim[0] * ChunkDim[1];
     meshRenderer = std::list<minecraft::MeshRenderer*>{};
     for (int i = 0; i < chunkCount; i++)
@@ -81,20 +72,19 @@ void genChunks(bool worldGen = true)
     }
     if (worldGen)
     {
-        worldRenderer->ClearChunks();
         int seed = rand();
         auto meshRenderIt = meshRenderer.begin();
         for (int xi = 0; xi < ChunkDim[0]; xi++)
         {
             for (int zi = 0; zi < ChunkDim[1]; zi++)
             {
-                minecraft::Chunk* temp = new minecraft::Chunk(glm::vec3(xi * 16, 0, zi * 16));
-                for (int x = 0; x < 16; x++)
+                minecraft::Chunk* temp = new minecraft::Chunk(glm::vec3(xi * CHUNK_SIZE, 0, zi * CHUNK_SIZE));
+                for (int x = 0; x < CHUNK_SIZE; x++)
                 {
-                    int X = x + 16 * xi;
-                    for (int z = 0; z < 16; z++)
+                    int X = x + CHUNK_SIZE * xi;
+                    for (int z = 0; z < CHUNK_SIZE; z++)
                     {
-                        int Z = z + 16 * zi;
+                        int Z = z + CHUNK_SIZE * zi;
                         int h = noiseBase + (int)(20.0 * minecraft::WorldGen::FBM(glm::vec2(X + seed, Z + seed), frequency, lacunarity, octaves, bias, upperScale, lowerScale));
                         for (int y = h; y >= 0; y--)
                         {
@@ -129,27 +119,14 @@ void genChunks(bool worldGen = true)
                         }
                     }
                 }
-                worldRenderer->RegisterChunk(*temp);
                 temp->Consolidate();
-                (*meshRenderIt)->AddChunk(*temp, outsideFlags);
+                (*meshRenderIt)->AddChunk(*temp, 0);
                 (*meshRenderIt)->Update();
                 delete temp;
                 meshRenderIt++;
             }
         }
-        worldRenderer->CreateInstanceData();
-    }   
-    else
-    {
-        worldRenderer->CreateInstanceData_CheckFlags(
-            (px ? (int)minecraft::OutsideFlags::PX : 0) |
-            (nx ? (int)minecraft::OutsideFlags::NX : 0) |
-            (py ? (int)minecraft::OutsideFlags::PY : 0) |
-            (ny ? (int)minecraft::OutsideFlags::NY : 0) |
-            (pz ? (int)minecraft::OutsideFlags::PZ : 0) |
-            (nz ? (int)minecraft::OutsideFlags::NZ : 0)
-        );
-    } 
+    }
 }
 
 void genFakeOctreeChunks()
@@ -170,22 +147,22 @@ void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z)
     {
     case 0:
         chunk.SetBlockAt(BlockType::Leaves, x, y, z);
-        if (z + 1 < 16) chunk.SetBlockAt(BlockType::Leaves, x, y, z + 1);
+        if (z + 1 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x, y, z + 1);
         if (z - 1 >= 0) chunk.SetBlockAt(BlockType::Leaves, x, y, z - 1);
-        if (x + 1 < 16) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z);
+        if (x + 1 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z);
         if (x - 1 >= 0) chunk.SetBlockAt(BlockType::Leaves, x - 1, y, z);
         break;
     case 1:
         chunk.SetBlockAt(BlockType::Log, x, y, z);
-        if (z + 1 < 16) chunk.SetBlockAt(BlockType::Leaves, x, y, z + 1);
+        if (z + 1 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x, y, z + 1);
         if (z - 1 >= 0) chunk.SetBlockAt(BlockType::Leaves, x, y, z - 1);
-        if (x + 1 < 16) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z);
+        if (x + 1 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z);
         if (x - 1 >= 0) chunk.SetBlockAt(BlockType::Leaves, x - 1, y, z);
         // 50%
-        if (CheckProbability(0.5) && x + 1 < 16 && z + 1 < 16) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z + 1);
+        if (CheckProbability(0.5) && x + 1 < CHUNK_SIZE && z + 1 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z + 1);
         if (CheckProbability(0.5) && x - 1 > 0 && z - 1 > 0) chunk.SetBlockAt(BlockType::Leaves, x - 1, y, z - 1);
-        if (CheckProbability(0.5) && x + 1 < 16 && z - 1 > 0) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z - 1);
-        if (CheckProbability(0.5) && x - 1 > 0 && z + 1 < 16) chunk.SetBlockAt(BlockType::Leaves, x - 1, y, z + 1);
+        if (CheckProbability(0.5) && x + 1 < CHUNK_SIZE && z - 1 > 0) chunk.SetBlockAt(BlockType::Leaves, x + 1, y, z - 1);
+        if (CheckProbability(0.5) && x - 1 > 0 && z + 1 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x - 1, y, z + 1);
         break;
     case 2:
         FillTreeLayer2n3(chunk, x, y, z);
@@ -205,21 +182,21 @@ void FillTreeLayer2n3(minecraft::Chunk& chunk, int x, int y, int z)
     {
         for (int zi = z - 1; zi <= z + 1; zi++)
         {
-            if (xi < 16 && xi > 0 && zi > 0 && zi < 16) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
+            if (xi < CHUNK_SIZE && xi > 0 && zi > 0 && zi < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
         }
     }
     for (int xi = x - 1; xi <= x + 1; xi++)
     {
         for (int zi = z - 2; zi <= z + 2; zi++)
         {
-            if (xi < 16 && xi > 0 && zi > 0 && zi < 16) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
+            if (xi < CHUNK_SIZE && xi > 0 && zi > 0 && zi < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, xi, y, zi);
         }
     }
     // 50%
-    if (CheckProbability(0.5) && x + 2 < 16 && z + 2 < 16) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z + 2);
+    if (CheckProbability(0.5) && x + 2 < CHUNK_SIZE && z + 2 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z + 2);
     if (CheckProbability(0.5) && x - 2 > 0 && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z - 2);
-    if (CheckProbability(0.5) && x + 2 < 16 && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z - 2);
-    if (CheckProbability(0.5) && x - 2 > 0 && z + 2 < 16) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z + 2);
+    if (CheckProbability(0.5) && x + 2 < CHUNK_SIZE && z - 2 > 0) chunk.SetBlockAt(BlockType::Leaves, x + 2, y, z - 2);
+    if (CheckProbability(0.5) && x - 2 > 0 && z + 2 < CHUNK_SIZE) chunk.SetBlockAt(BlockType::Leaves, x - 2, y, z + 2);
 }
 
 void loadAssets(GLFWwindow* window)
@@ -242,7 +219,6 @@ void loadAssets(GLFWwindow* window)
     });
 
     // Chunks/World
-    worldRenderer = new minecraft::WorldRenderer();
     genChunks();
     // genFakeOctreeChunks();
 }
@@ -370,6 +346,8 @@ float ssaoBias = 0.754f;
 float ssaoPower = 1.0f;
 int ssaoSamples = 16;
 int ssaoBlur = 2;
+bool lightingEnabled = false;
+bool worldGenEnabled = false;
 int main()
 {
     mainWindow = new window::Window(800, 600, "Minecraft C++");
@@ -439,54 +417,53 @@ int main()
         }
 
         ImGui::Begin("Render Debug");
-        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(worldRenderer->GetChunkCount())).c_str());
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(meshRenderer.size())).c_str());
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
         ImGui::Separator();
         ImGui::Combo("Render Mode", &chosenRenderMode, renderModes);
         ImGui::Checkbox("Wireframe", &wireframe);
+        ImGui::Separator();
+        ImGui::Checkbox("Lighting", &lightingEnabled);
+        ImGui::Checkbox("World Gen", &worldGenEnabled);
         ImGui::End();
 
-        ImGui::Begin("Lighting");
-        ImGui::ColorEdit3("Light Color", (float*)&(lightSettings->LightColor));
-        ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightSettings->LightDir), -128.0, 128);
-        ImGui::Separator();
-        ImGui::ColorEdit3("Fog Color", (float*)&(lightSettings->FogColor));
-        ImGui::SliderFloat("Fog Density", &(lightSettings->FogDensity), 0.0, 0.125);
-        ImGui::Separator();
-        ImGui::ColorEdit3("Sky Color", (float*)(&skyColor));
-        ImGui::Separator();
-        ImGui::SliderFloat("SSAO Radius", &ssaoRadius, 0.0, 10.0);
-        ImGui::SliderFloat("SSAO Bias", &ssaoBias, 0.0, 1.0);
-        ImGui::SliderFloat("SSAO Power", &ssaoPower, 0.1, 5.0);
-        ImGui::SliderInt("SSAO Samples", &ssaoSamples, 1, 64);
-        ImGui::End();
+        if (lightingEnabled)
+        {
+            ImGui::Begin("Lighting");
+            ImGui::ColorEdit3("Light Color", (float*)&(lightSettings->LightColor));
+            ImGui::SliderFloat3("Light Direction", glm::value_ptr(lightSettings->LightDir), -128.0, 128);
+            ImGui::Separator();
+            ImGui::ColorEdit3("Fog Color", (float*)&(lightSettings->FogColor));
+            ImGui::SliderFloat("Fog Density", &(lightSettings->FogDensity), 0.0, 0.125);
+            ImGui::Separator();
+            ImGui::ColorEdit3("Sky Color", (float*)(&skyColor));
+            ImGui::Separator();
+            ImGui::SliderFloat("SSAO Radius", &ssaoRadius, 0.0, 10.0);
+            ImGui::SliderFloat("SSAO Bias", &ssaoBias, 0.0, 1.0);
+            ImGui::SliderFloat("SSAO Power", &ssaoPower, 0.1, 5.0);
+            ImGui::SliderInt("SSAO Samples", &ssaoSamples, 1, 64);
+            ImGui::End();
+        }
 
-        ImGui::Begin("World Gen");
-        ImGui::Text("Noise Properties");
-        ImGui::SliderInt("Octaves", &octaves, 1, 20);
-        ImGui::SliderFloat("Frequency", &frequency, 0.0, 0.005, "%.6f");
-        ImGui::SliderFloat("Lacunarity", &lacunarity, 0.0, 0.05);
-        ImGui::SliderFloat("Bias", &bias, -1.0, 0.0);
-        ImGui::SliderFloat("Upper Scale", &upperScale, 0.0, 2.0);
-        ImGui::SliderFloat("Lower Scale", &lowerScale, 0.0, 2.0);
-        ImGui::Separator();
-        ImGui::Text("World Properties");
-        ImGui::SliderInt("Base Height", &noiseBase, 15, 100);
-        ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 64);
-        ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
-        ImGui::Separator();
-        if (ImGui::Button("Regenerate World")) genChunks();
-        ImGui::End();
-
-        ImGui::Begin("Chunk Draw");
-        ImGui::Checkbox("+X", &px);
-        ImGui::Checkbox("-X", &nx);
-        ImGui::Checkbox("+Y", &py);
-        ImGui::Checkbox("-Y", &ny);
-        ImGui::Checkbox("+Z", &pz);
-        ImGui::Checkbox("-Z", &nz);
-        if (ImGui::Button("Retopo Chunks")) genChunks();
-        ImGui::End();
+        if (worldGenEnabled)
+        {
+            ImGui::Begin("World Gen");
+            ImGui::Text("Noise Properties");
+            ImGui::SliderInt("Octaves", &octaves, 1, 20);
+            ImGui::SliderFloat("Frequency", &frequency, 0.0, 0.005, "%.6f");
+            ImGui::SliderFloat("Lacunarity", &lacunarity, 0.0, 0.05);
+            ImGui::SliderFloat("Bias", &bias, -1.0, 0.0);
+            ImGui::SliderFloat("Upper Scale", &upperScale, 0.0, 2.0);
+            ImGui::SliderFloat("Lower Scale", &lowerScale, 0.0, 2.0);
+            ImGui::Separator();
+            ImGui::Text("World Properties");
+            ImGui::SliderInt("Base Height", &noiseBase, 15, 100);
+            ImGui::SliderInt2("Chunk Amount", &ChunkDim[0], 1, 64);
+            ImGui::SliderFloat("Tree Probability", &treeProb, 0.0, 0.1);
+            ImGui::Separator();
+            if (ImGui::Button("Regenerate World")) genChunks();
+            ImGui::End();
+        }
 
         fontHandler->pop_all();
 
@@ -498,7 +475,7 @@ int main()
     mainWindow->Run();
 
     CleanupPointers();
-    delete renderer, lightSettings, worldRenderer;
+    delete renderer, lightSettings, meshRenderer;
 
     return 0;
 }

@@ -7,7 +7,7 @@
 #include "../lighting/deferred.hpp"
 #include "../octree.hpp"
 
-#define RAW_DATA_INDEX(x, y, z) x + y * 256 + z * 16
+const int CHUNK_SIZE = 256;
 
 namespace minecraft
 {
@@ -51,12 +51,7 @@ namespace minecraft
         Chunk(glm::vec3 chunkOffset);
         ~Chunk();
 
-        void CreateInstanceData(std::vector<BlockInstanceData>& worldBin);
-        void CreateInstanceData_CheckFlags(std::vector<BlockInstanceData>& worldBin, int flags);
-
         void Consolidate();
-
-        int GetLowestSurface();
 
         BlockChunkData GetBlockAt(int x, int y, int z);
         void SetBlockAt(BlockType type, int x, int y, int z);
@@ -64,9 +59,8 @@ namespace minecraft
         void FillRegion(BlockType type, glm::vec3 start, glm::vec3 end);
 
         glm::vec3 chunkOffset;
-        Octree<BlockChunkData>* octrees;
+        Octree<BlockChunkData>* octree;
     private:
-        void InitOctrees();
-        void OctreeToBin(Octree<BlockChunkData>& tree, glm::vec3 offset, std::vector<BlockInstanceData>& worldBin);
+        void InitOctree();
     };
 }

@@ -38,7 +38,6 @@
     <ClCompile Include="src/minecraft/mesh_renderer.cpp" />
     <ClCompile Include="src/minecraft/simplex1234.cpp" />
     <ClCompile Include="src/minecraft/worldgen.cpp" />
-    <ClCompile Include="src/minecraft/world_renderer.cpp" />
     <ClCompile Include="src/post/fs_quad.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

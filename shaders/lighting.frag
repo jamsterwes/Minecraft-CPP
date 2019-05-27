@@ -29,8 +29,8 @@ void main()
     vec3 Normal = texture(gNormal, TexCoords).rgb;
     vec3 Albedo = texture(gAlbedoSpec, TexCoords).rgb;
     float Specular = texture(gAlbedoSpec, TexCoords).a;
-    // float AO = pow(texture(gAO, TexCoords).r, SSAOPower);
-    float AO = 1.0;
+    float AO = pow(texture(gAO, TexCoords).r, SSAOPower);
+    // float AO = 1.0;
 
     if (Debug == 0)
     {

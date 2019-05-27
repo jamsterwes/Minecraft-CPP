@@ -69,7 +69,7 @@ namespace lighting
     void DeferredRenderer::RenderToScreen(gfx::camera& cam, LightingSettings lightSettings)
     {
         // Render SSAO pass
-        // SSAOPass(cam);
+        SSAOPass(cam);
         // Render lighting pass
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
