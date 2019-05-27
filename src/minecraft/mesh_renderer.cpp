@@ -67,7 +67,7 @@ namespace minecraft
                 int x = (direction.x == 1.0 ? 1 : (direction.x == -1.0 ? 0 : a));
                 int y = (direction.y == 1.0 ? 1 : (direction.y == -1.0 ? 0 : (ax ? b : a)));
                 int z = (direction.z == 1.0 ? 1 : (direction.z == -1.0 ? 0 : ((ax || ay) ? b : a)));
-                edge* node = root->GetChild(1, y, z);
+                edge* node = root->GetChild(x, y, z);
                 bool nodeCheck = false;
                 if (node->divided) nodeCheck = CheckPlane(node, direction);
                 else nodeCheck = node->data.type == BlockType::Air;
@@ -90,7 +90,7 @@ namespace minecraft
         int yi = path.y;
         int zi = path.z;
         int c = 8;
-        while (c > res / 2)
+        while (c > res)
         {
             if (!ptr->divided) return ptr;
             int octX = (xi >= c) ? 1 : 0; if (xi >= c) xi -= c;
@@ -106,40 +106,42 @@ namespace minecraft
     int MeshRenderer::EdgeOccupancy(Octree<BlockChunkData>* node, glm::vec3 coords)
     {
         int cull = 63;
-        // int oppositeX = (static_cast<int>(coords.x) + 1) % 2;
-        // int oppositeY = (static_cast<int>(coords.y) + 1) % 2;
-        // int oppositeZ = (static_cast<int>(coords.z) + 1) % 2;
-
-        // CULL SIBLINGS
-        // edge* ox = node->parent->GetChild(oppositeX, coords.y, coords.z);
-        // if (!CheckPlane(ox, glm::vec3(coords.x == 1.0 ? 1.0 : -1.0, 0.0, 0.0))) cull ^= (int)(coords.x == 1.0 ? OutsideFlags::NX : OutsideFlags::PX);
-        // edge* oy = node->parent->GetChild(coords.x, oppositeY, coords.z);
-        // if (!CheckPlane(oy, glm::vec3(0.0, coords.y == 1.0 ? 1.0 : -1.0, 0.0))) cull ^= (int)(coords.y == 1.0 ? OutsideFlags::NY : OutsideFlags::PY);
-        // edge* oz = node->parent->GetChild(coords.x, coords.y, oppositeZ);
-        // if (!CheckPlane(oz, glm::vec3(0.0, 0.0, coords.z == 1.0 ? 1.0 : -1.0))) cull ^= (int)(coords.z == 1.0 ? OutsideFlags::NZ : OutsideFlags::PZ);
-
-        // SKIP COUSIN CHECK IF NO GRANDPARENTS
-        if (node->dim >= 8) return cull;
 
         // CULL COUSINS
         glm::vec3 path = node->GetPath();
-        bool xBorder = path.x > 0 && path.x < 16 - node->dim;
-        bool yBorder = path.y > 0 && path.y < 16 - node->dim;
-        bool zBorder = path.z > 0 && path.z < 16 - node->dim;
 
-        if (xBorder)
+        for (int d = 0; d < 2; d++)
         {
-            float direction = coords.x == 0.0 ? -1.0 : 1.0;
-            // ACTUAL PATH
-            int actualX = ~((int)path.x) & 15;
-            glm::vec3 actualPath = glm::vec3((float)actualX, path.y, path.z);
+            int direction = (2 * d) - 1;
+            float actualD = path.x + direction * node->dim;
+            if (actualD < 0 || actualD > 15) continue;
+            glm::vec3 actualPath = glm::vec3(actualD, path.y, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!foundPath->divided && foundPath->data.type != BlockType::Air) cull ^= (int)(coords.x == 0.0 ? OutsideFlags::NX : OutsideFlags::PX);
-            else if (!CheckPlane(foundPath, glm::vec3(-direction, 0.0, 0.0))) cull ^= (int)(coords.x == 0.0 ? OutsideFlags::NX : OutsideFlags::PX);
+            if (!CheckPlane(foundPath, glm::vec3(direction, 0.0, 0.0))) cull ^= (int)(direction == -1.0 ? OutsideFlags::NX : OutsideFlags::PX);
+        }
+        for (int d = 0; d < 2; d++)
+        {
+            int direction = (2 * d) - 1;
+            float actualD = path.y + direction * node->dim;
+            if (actualD < 0 || actualD > 15) continue;
+            glm::vec3 actualPath = glm::vec3(path.x, actualD, path.z);
+            // FIND PATH
+            edge* foundPath = FindPath(node, actualPath, node->dim);
+            if (!CheckPlane(foundPath, glm::vec3(0.0, direction, 0.0))) cull ^= (int)(direction == -1.0 ? OutsideFlags::NY : OutsideFlags::PY);
+        }
+        for (int d = 0; d < 2; d++)
+        {
+            int direction = (2 * d) - 1;
+            float actualD = path.z + direction * node->dim;
+            if (actualD < 0 || actualD > 15) continue;
+            glm::vec3 actualPath = glm::vec3(path.x, path.y, actualD);
+            // FIND PATH
+            edge* foundPath = FindPath(node, actualPath, node->dim);
+            if (!CheckPlane(foundPath, glm::vec3(0.0, 0.0, direction))) cull ^= (int)(direction == -1.0 ? OutsideFlags::NZ : OutsideFlags::PZ);
         }
 
-        return ~cull;
+        return cull;
     }
 
     void MeshRenderer::RenderOctree(glm::vec3 offset, Octree<BlockChunkData>* tree, int outsideFlags)

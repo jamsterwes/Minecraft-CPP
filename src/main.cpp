@@ -46,7 +46,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {1, 1};
+int ChunkDim[2] = {40, 40};
 int chunkCount = ChunkDim[0] * ChunkDim[1];
 
 int octaves = 7;
