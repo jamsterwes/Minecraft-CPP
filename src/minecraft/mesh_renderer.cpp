@@ -41,11 +41,13 @@ namespace minecraft
         case BlockType::Stone:
             return {3, 3, 3};
         case BlockType::Bedrock:
-            return {11, 11, 11};
+            return {4, 4, 4};
         case BlockType::Log:
-            return {16, 17, 17};
+            return {5, 6, 6};
         case BlockType::Leaves:
-            return {19, 19, 19};
+            return {7, 7, 7};
+        case BlockType::Sand:
+            return {8, 8, 8};
         default:
             return {0, 0, 0};
         }

@@ -61,6 +61,12 @@ bool wireframe = false;
 
 std::list<minecraft::MeshRenderer*> meshRenderer;
 
+// const minecraft::BlockType surface = BlockType::Grass;
+const minecraft::BlockType surface = BlockType::Sand;
+
+// const minecraft::BlockType subsurface = BlockType::Dirt;
+const minecraft::BlockType subsurface = BlockType::Sand;
+
 void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z);
 void genChunks(bool worldGen = true)
 {
@@ -99,22 +105,22 @@ void genChunks(bool worldGen = true)
                             else if (y < h - 6) type = BlockType::Stone;
                             else if (y == h)
                             {
-                                type = BlockType::Grass;
+                                type = surface;
                                 if (CheckProbability(treeProb / 10.0))
                                 {
                                     int max = h + 7 + treeNoise;
                                     for (int y2 = h + 1; y2 <= max; y2++)
                                     {
-                                        FillTreeLayer(*temp, int(max - y2), x, y2, z);
+                                        // FillTreeLayer(*temp, int(max - y2), x, y2, z);
                                     }
                                     type = BlockType::Dirt;
                                 }
                                 else
                                 {
-                                    type = BlockType::Grass;
+                                    type = surface;
                                 }
                             }
-                            else if (y >= h - 6) type = BlockType::Dirt;
+                            else if (y >= h - 6) type = subsurface;
                             temp->SetBlockAt(type, x, y, z);
                         }
                     }

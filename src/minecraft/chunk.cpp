@@ -22,6 +22,8 @@ namespace minecraft
             return glm::vec2(0, 2);
         case BlockType::Leaves:
             return glm::vec2(3, 2);
+        case BlockType::Sand:
+            return glm::vec2(3, 3);
         default:
             return glm::vec2(-1, -1);
         }
