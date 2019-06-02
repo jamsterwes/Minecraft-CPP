@@ -61,18 +61,17 @@ public:
             if (children[i].divided)
             {
                 canConsolidate = false;
-                break;
+                continue;
             }
-            if (!setT) 
+            else if (!setT) 
             {
                 t = children[i].data;
                 setT = true;
-                continue;
             }
-            if (t != children[i].data)
+            else if (t != children[i].data)
             {
                 canConsolidate = false;
-                break;
+                continue;
             }
         }
         if (canConsolidate)

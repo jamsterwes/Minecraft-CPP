@@ -38,6 +38,7 @@ namespace lighting
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
         void GBufferPass(std::function<void()> drawGBuffer);
         void SSAOPass(gfx::camera& cam);
+        void SSAOBlurPass();
 
         // G-Buffer
         unsigned int gBuffer;

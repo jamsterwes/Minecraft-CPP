@@ -46,7 +46,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {2, 2};
+int ChunkDim[2] = {1, 1};
 int chunkCount = ChunkDim[0] * ChunkDim[1];
 
 int octaves = 7;
@@ -55,7 +55,7 @@ float lacunarity = 0.015;
 float bias = -0.493f;
 float upperScale = 0.974f;
 float lowerScale = 0.00f;
-int noiseBase = 30;
+int noiseBase = 80;
 float treeProb = 0.049f;
 bool wireframe = false;
 
@@ -341,13 +341,17 @@ void InitRenderer()
 const char* renderModes = "Lit\0Position (G-Buffer)\0Normal (G-Buffer)\0Albedo (G-Buffer)\0AO (SSAO Pass)\0";
 int chosenRenderMode = 0;
 
-float ssaoRadius = 2.316f;
-float ssaoBias = 0.754f;
-float ssaoPower = 1.0f;
-int ssaoSamples = 16;
-int ssaoBlur = 2;
+int ssaoBlurRadius = 2;
+float ssaoRadius = 3.156f;
+float ssaoBias = 0.217f;
+float ssaoPower = 0.502f;
+int ssaoSamples = 10;
 bool lightingEnabled = false;
 bool worldGenEnabled = false;
+
+float fps = 0;
+int frameCount = 0;
+
 int main()
 {
     mainWindow = new window::Window(800, 600, "Minecraft C++");
@@ -376,7 +380,8 @@ int main()
     mainWindow->AddRenderAction([&](GLFWwindow* window) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
-        glDisable(GL_MULTISAMPLE);
+        glEnable(GL_MULTISAMPLE);
+        // glDisable(GL_MULTISAMPLE);
 
         mainWindow->SetClearColor(gfx::color("#000000"));
         // Clear G-Buffer
@@ -386,6 +391,7 @@ int main()
         renderer->ssao->ssaoShader->setFloat("radius", ssaoRadius);
         renderer->ssao->ssaoShader->setFloat("bias", ssaoBias);
         renderer->ssao->ssaoShader->setInt("kernelSize", ssaoSamples);
+        renderer->ssao->ssaoBlurShader->setInt("blurAmount", ssaoBlurRadius);
         renderer->RenderWorld([&]() {
             auto meshRenderIt = meshRenderer.begin();
             while (meshRenderIt != meshRenderer.end())
@@ -416,9 +422,16 @@ int main()
             meshRenderIt++;
         }
 
+        if (std::fmod(glfwGetTime(), 1.0) < deltaTime)
+        {
+            fps = 1.0 / deltaTime;
+            frameCount = 0;
+        }
+        frameCount++;
+
         ImGui::Begin("Render Debug");
         ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#42aaf4")), 1.0), ("Chunks: " + std::to_string(meshRenderer.size())).c_str());
-        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(1.0 / (glfwGetTime() - previousFrameTime))).c_str());
+        ImGui::TextColored(ImVec4(UNPACK_COLOR3(gfx::color("#0ef174")), 1.0), ("FPS: " + std::to_string(static_cast<int>(fps))).c_str());
         ImGui::Separator();
         ImGui::Combo("Render Mode", &chosenRenderMode, renderModes);
         ImGui::Checkbox("Wireframe", &wireframe);
@@ -438,6 +451,7 @@ int main()
             ImGui::Separator();
             ImGui::ColorEdit3("Sky Color", (float*)(&skyColor));
             ImGui::Separator();
+            ImGui::SliderInt("SSAO Blur Radius", &ssaoBlurRadius, 2, 8);
             ImGui::SliderFloat("SSAO Radius", &ssaoRadius, 0.0, 10.0);
             ImGui::SliderFloat("SSAO Bias", &ssaoBias, 0.0, 1.0);
             ImGui::SliderFloat("SSAO Power", &ssaoPower, 0.1, 5.0);

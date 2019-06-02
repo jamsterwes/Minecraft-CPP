@@ -93,7 +93,6 @@ namespace minecraft
     {
         octree = new Octree<BlockChunkData>{};
         octree->data.type = BlockType::Air;
-        octree->data.outside = 0;
         octree->dim = CHUNK_SIZE;
     }
 }

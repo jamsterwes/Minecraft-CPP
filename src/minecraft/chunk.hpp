@@ -38,10 +38,9 @@ namespace minecraft
     struct BlockChunkData
     {
         BlockType type;
-        int outside;
 
         bool operator==(BlockChunkData& rhs) { return (type == rhs.type); }
-        bool operator!=(BlockChunkData& rhs) { return !(*this == rhs); }
+        bool operator!=(BlockChunkData& rhs) { return type != rhs.type; }
     };
 
     class Chunk

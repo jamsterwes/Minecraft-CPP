@@ -8,7 +8,9 @@ namespace lighting
     {
         glGenTextures(1, &noiseTex);
         glGenTextures(1, &aoBuffer);
+        glGenTextures(1, &aoBlurBuffer);
         glGenFramebuffers(1, &frameBuffer);
+        glGenFramebuffers(1, &blurFrameBuffer);
 
         GenerateBuffers(width, height);
         GenerateKernel();
@@ -16,6 +18,9 @@ namespace lighting
 
         ssaoShader = new gfx::shader("shaders/postPass.vert", "shaders/ssao.frag");
         ssaoShader->compile();
+
+        ssaoBlurShader = new gfx::shader("shaders/postPass.vert", "shaders/ssaoBlur.frag");
+        ssaoBlurShader->compile();
     }
 
     float lerp(float a, float b, float t)
@@ -31,10 +36,20 @@ namespace lighting
         // SSAO FRAMEBUFFER
         glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
         glBindTexture(GL_TEXTURE_2D, aoBuffer);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, (int)(width / 2), (int)(height / 2), 0, GL_RED, GL_FLOAT, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, width, height, 0, GL_RED, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, aoBuffer, 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "SSAO Framebuffer not complete!" << std::endl;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // SSAO BLUR FRAMEBUFFER
+        glBindFramebuffer(GL_FRAMEBUFFER, blurFrameBuffer);
+        glBindTexture(GL_TEXTURE_2D, aoBlurBuffer);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, width, height, 0, GL_RED, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, aoBlurBuffer, 0);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             std::cout << "SSAO Framebuffer not complete!" << std::endl;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

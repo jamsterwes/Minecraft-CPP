@@ -110,31 +110,31 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.x + direction * node->dim;
-            if (actualD <= 0 || actualD >= CHUNK_SIZE - 1) continue;
+            if (actualD < 0 && direction == -1 || actualD > CHUNK_SIZE - 1 && direction == 1) continue;
             glm::vec3 actualPath = glm::vec3(actualD, path.y, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!CheckPlane(foundPath, glm::vec3(direction, 0.0, 0.0))) cull ^= (int)(direction == -1.0 ? OutsideFlags::NX : OutsideFlags::PX);
+            if (!CheckPlane(foundPath, glm::vec3(direction, 0.0, 0.0))) cull ^= (int)(direction == -1 ? OutsideFlags::NX : OutsideFlags::PX);
         }
         for (int d = 0; d < 2; d++)
         {
             int direction = (2 * d) - 1;
             float actualD = path.y + direction * node->dim;
-            if (actualD <= 0 || actualD >= CHUNK_SIZE - 1) continue;
+            if (actualD < 0 && direction == -1 || actualD > CHUNK_SIZE - 1 && direction == 1) continue;
             glm::vec3 actualPath = glm::vec3(path.x, actualD, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!CheckPlane(foundPath, glm::vec3(0.0, direction, 0.0))) cull ^= (int)(direction == -1.0 ? OutsideFlags::NY : OutsideFlags::PY);
+            if (!CheckPlane(foundPath, glm::vec3(0.0, direction, 0.0))) cull ^= (int)(direction == -1 ? OutsideFlags::NY : OutsideFlags::PY);
         }
         for (int d = 0; d < 2; d++)
         {
             int direction = (2 * d) - 1;
             float actualD = path.z + direction * node->dim;
-            if (actualD <= 0 || actualD >= CHUNK_SIZE - 1) continue;
+            if (actualD < 0 && direction == -1 || actualD > CHUNK_SIZE - 1 && direction == 1) continue;
             glm::vec3 actualPath = glm::vec3(path.x, path.y, actualD);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!CheckPlane(foundPath, glm::vec3(0.0, 0.0, direction))) cull ^= (int)(direction == -1.0 ? OutsideFlags::NZ : OutsideFlags::PZ);
+            if (!CheckPlane(foundPath, glm::vec3(0.0, 0.0, direction))) cull ^= (int)(direction == -1 ? OutsideFlags::NZ : OutsideFlags::PZ);
         }
 
         return cull;
