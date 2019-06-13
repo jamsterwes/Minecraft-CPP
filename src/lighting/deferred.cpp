@@ -1,7 +1,7 @@
 #include "deferred.hpp"
 #include "../models/cube.hpp"
-#include "../minecraft/world_renderer.hpp"
 #include <glm/gtx/transform.hpp>
+#include <iostream>
 
 namespace lighting
 {
@@ -33,12 +33,26 @@ namespace lighting
         glGenTextures(1, &gPosition);
         glGenTextures(1, &gNormal);
         glGenTextures(1, &gAlbedoSpec);
-        glGenRenderbuffers(1, &gDepthStencil);
+
+        // Create G-Buffer MS
+        glGenFramebuffers(1, &gBufferMS);
+        glBindFramebuffer(GL_FRAMEBUFFER, gBufferMS);
+        glGenTextures(1, &gPositionMS);
+        glGenTextures(1, &gNormalMS);
+        glGenTextures(1, &gAlbedoSpecMS);
+        glGenRenderbuffers(1, &gDepthStencilMS);
+
         Resize(width, height);
-        // Attach G-Buffer sub-buffers
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "G-Buffer is not complete!" << std::endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, gBufferMS);
         unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
         glDrawBuffers(3, attachments);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "G-Buffer [MS] is not complete!" << std::endl;
 
         ssao = new SSAO(width, height);
     }
@@ -55,7 +69,7 @@ namespace lighting
 
     void DeferredRenderer::ClearGBuffer()
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, gBufferMS);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
@@ -102,31 +116,24 @@ namespace lighting
         this->width = width;
         this->height = height;
 
+        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         CreateTexture(gPosition, width, height, GL_RGBA16F, GL_RGBA, GL_FLOAT, GL_COLOR_ATTACHMENT0);
         CreateTexture(gNormal, width, height, GL_RGB16F, GL_RGB, GL_FLOAT, GL_COLOR_ATTACHMENT1);
         CreateTexture(gAlbedoSpec, width, height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, GL_COLOR_ATTACHMENT2);
-    
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-        glBindRenderbuffer(GL_RENDERBUFFER, gDepthStencil);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepthStencil);
-    }
-    
-    void DeferredRenderer::ShadowMapPass(minecraft::WorldRenderer& world, ShadowCam& cam)
-    {
-        glViewport(0, 0, cam.shadowMapResolution, cam.shadowMapResolution);
-        glBindFramebuffer(GL_FRAMEBUFFER, cam.shadowFramebuffer);
 
-        cam.shadowShader->use();
-        cam.shadowShader->setMatrix("lightSpaceMat", cam.GetLightSpace(glm::vec3(64.0f, -110.0f, 64.0f)));
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, width, height);
+        glBindFramebuffer(GL_FRAMEBUFFER, gBufferMS);
+        CreateTextureMS(gPositionMS, 2, width, height, GL_RGBA16F, GL_COLOR_ATTACHMENT0);
+        CreateTextureMS(gNormalMS, 2, width, height, GL_RGB16F, GL_COLOR_ATTACHMENT1);
+        CreateTextureMS(gAlbedoSpecMS, 2, width, height, GL_RGBA, GL_COLOR_ATTACHMENT2);
+    
+        glBindRenderbuffer(GL_RENDERBUFFER, gDepthStencilMS);
+        glRenderbufferStorageMultisample(GL_RENDERBUFFER, 2, GL_DEPTH_COMPONENT24, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepthStencilMS);
     }
 
     void DeferredRenderer::GBufferPass(std::function<void()> drawGBuffer)
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, gBufferMS);
         glDepthMask(true);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -140,8 +147,8 @@ namespace lighting
         atlas->slot(GL_TEXTURE0);
 
         drawGBuffer();
-        // world.LinkToRenderer(*this);
-        // cubeModel->DrawInstanced(GL_UNSIGNED_INT, world.GetInstanceCount());
+
+        ResolveMS();
     }
 
     void DeferredRenderer::SSAOPass(gfx::camera& cam)
@@ -191,5 +198,30 @@ namespace lighting
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
+    }
+
+    void DeferredRenderer::CreateTextureMS(unsigned int tex, unsigned int samples, int width, int height, GLint internalFormat, GLenum attachment)
+    {
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, tex);
+        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, internalFormat, width, height, GL_TRUE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D_MULTISAMPLE, tex, 0);
+    }
+
+    void DeferredRenderer::ResolveMS()
+    {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBufferMS);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gBuffer);
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glReadBuffer(GL_COLOR_ATTACHMENT1);
+        glDrawBuffer(GL_COLOR_ATTACHMENT1);
+        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glReadBuffer(GL_COLOR_ATTACHMENT2);
+        glDrawBuffer(GL_COLOR_ATTACHMENT2);
+        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }

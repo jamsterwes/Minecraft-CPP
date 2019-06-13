@@ -27,26 +27,31 @@ namespace lighting
         void RenderWorld(std::function<void()> drawGBuffer, gfx::camera& cam);
         void RenderToScreen(gfx::camera& cam, LightingSettings lightSettings);
         void Resize(int width, int height);
-        
-        void ShadowMapPass(minecraft::WorldRenderer& world, ShadowCam& cam);
 
+        gfx::shader* gBufferShader;
         gfx::shader* lightingShader;
 
         // Effects
         SSAO* ssao;
     private:
         void CreateTexture(unsigned int tex, int width, int height, GLint internalFormat, GLenum format, GLenum type, GLenum attachment);
+        void CreateTextureMS(unsigned int tex, unsigned int samples, int width, int height, GLint internalFormat, GLenum attachment);
         void GBufferPass(std::function<void()> drawGBuffer);
         void SSAOPass(gfx::camera& cam);
         void SSAOBlurPass();
+        void ResolveMS();
 
         // G-Buffer
         unsigned int gBuffer;
-        unsigned int gPosition, gNormal, gAlbedoSpec, gDepthStencil;
+        unsigned int gPosition, gNormal, gAlbedoSpec;
+
+        // G-Buffer MS
+        unsigned int gBufferMS;
+        unsigned int gPositionMS, gNormalMS, gAlbedoSpecMS, gDepthStencilMS;
+
         int width, height;
 
         // Instanced Rendering
-        gfx::shader* gBufferShader;
         gfx::iv_buffer<>* cubeModel;
         gfx::texture2D* atlas;
         post::FSQuad* quad;

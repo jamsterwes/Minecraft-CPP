@@ -11,9 +11,9 @@
 #include "minecraft/chunk.hpp"
 #include "minecraft/mesh_renderer.hpp"
 #include "minecraft/worldgen.hpp"
-#include "minecraft/world_renderer.hpp"
 #include "models/cube.hpp"
 #include "window/window.hpp"
+#include "models/foliage.hpp"
 
 #include <imgui.h>
 #include "imgui/imgui_impl_glfw.hpp"
@@ -23,23 +23,33 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <iostream>
+
 gfx::camera* cam;
 gfx::texture2D* atlas;
 fonts::font_handler* fontHandler;
 window::Window *mainWindow;
 
+gfx::iv_buffer<>* foliage;
+
 std::vector<minecraft::Chunk> chunks;
 
 using minecraft::BlockType;
 
+unsigned int GAME_SEED = 0;
 void CleanupPointers()
 {
-    delete cam, atlas, fontHandler, mainWindow;
+    delete cam, atlas, fontHandler, mainWindow, foliage;
 }
 
-void SeedProbability()
+void SeedProbability(unsigned int seed = 0)
 {
-    srand(time(0));
+    if (seed == 0)
+    {
+        srand(time(0));
+        GAME_SEED = rand();
+    }
+    srand(GAME_SEED);
 }
 bool CheckProbability(float probability)
 {
@@ -61,11 +71,22 @@ bool wireframe = false;
 
 std::list<minecraft::MeshRenderer*> meshRenderer;
 
-// const minecraft::BlockType surface = BlockType::Grass;
-const minecraft::BlockType surface = BlockType::Sand;
 
-// const minecraft::BlockType subsurface = BlockType::Dirt;
-const minecraft::BlockType subsurface = BlockType::Sand;
+const minecraft::BlockType grass = BlockType::TallGrass;
+const minecraft::BlockType grassSurface = BlockType::Grass;
+const minecraft::BlockType subsurface = BlockType::Dirt;
+const minecraft::BlockType surface = BlockType::Grass;
+const float grassProbability = 0.05f;
+const bool makeFlowers = true;
+const bool makeTrees = true;
+
+// const minecraft::BlockType surface = BlockType::Sand;
+// const minecraft::BlockType subsurface = BlockType::Sand;
+// const minecraft::BlockType grass = BlockType::DeadBush;
+// const minecraft::BlockType grassSurface = BlockType::Sand;
+// const float grassProbability = 0.01f;
+// const bool makeFlowers = false;
+// const bool makeTrees = false;
 
 void FillTreeLayer(minecraft::Chunk& chunk, int layer, int x, int y, int z);
 void genChunks(bool worldGen = true)
@@ -106,14 +127,25 @@ void genChunks(bool worldGen = true)
                             else if (y == h)
                             {
                                 type = surface;
-                                if (CheckProbability(treeProb / 10.0))
+                                if (CheckProbability(treeProb / 20.0) && makeTrees)
                                 {
                                     int max = h + 7 + treeNoise;
                                     for (int y2 = h + 1; y2 <= max; y2++)
                                     {
-                                        // FillTreeLayer(*temp, int(max - y2), x, y2, z);
+                                        FillTreeLayer(*temp, int(max - y2), x, y2, z);
                                     }
                                     type = BlockType::Dirt;
+                                }
+                                else if (CheckProbability(treeProb / 10.0) && makeFlowers)
+                                {
+                                    if (treeNoise > 0.5) temp->SetBlockAt(BlockType::Rose, x, y + 1, z);
+                                    else temp->SetBlockAt(BlockType::Dandelion, x, y + 1, z);
+                                    type = grassSurface;
+                                }
+                                else if (CheckProbability(grassProbability))
+                                {
+                                    temp->SetBlockAt(grass, x, y + 1, z);
+                                    type = grassSurface;
                                 }
                                 else
                                 {
@@ -350,16 +382,19 @@ int chosenRenderMode = 0;
 int ssaoBlurRadius = 2;
 float ssaoRadius = 3.156f;
 float ssaoBias = 0.217f;
-float ssaoPower = 0.502f;
-int ssaoSamples = 10;
+float ssaoPower = 0.125f;
+int ssaoSamples = 64;
 bool lightingEnabled = false;
 bool worldGenEnabled = false;
+bool octreeDebugView = false;
 
 float fps = 0;
 int frameCount = 0;
 
-int main()
+int main(int argc, const char** argv)
 {
+    if (argc > 1) SeedProbability(atoi(argv[1]));
+    else SeedProbability();
     mainWindow = new window::Window(800, 600, "Minecraft C++");
     
     loadAssets(mainWindow->GetHandle());
@@ -387,17 +422,16 @@ int main()
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_MULTISAMPLE);
-        // glDisable(GL_MULTISAMPLE);
-
-        mainWindow->SetClearColor(gfx::color("#000000"));
         // Clear G-Buffer
         renderer->ClearGBuffer();
         // Render all chunks
         glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+        renderer->gBufferShader->setInt("OctreeDebug", octreeDebugView ? 1 : 0);
         renderer->ssao->ssaoShader->setFloat("radius", ssaoRadius);
         renderer->ssao->ssaoShader->setFloat("bias", ssaoBias);
         renderer->ssao->ssaoShader->setInt("kernelSize", ssaoSamples);
         renderer->ssao->ssaoBlurShader->setInt("blurAmount", ssaoBlurRadius);
+        // Draw chunks
         renderer->RenderWorld([&]() {
             auto meshRenderIt = meshRenderer.begin();
             while (meshRenderIt != meshRenderer.end())
@@ -441,6 +475,16 @@ int main()
         ImGui::Separator();
         ImGui::Combo("Render Mode", &chosenRenderMode, renderModes);
         ImGui::Checkbox("Wireframe", &wireframe);
+        ImGui::Checkbox("Octree Debug View", &octreeDebugView);
+        ImGui::Separator();
+        ImGui::Text("Game Seed: %d", GAME_SEED);
+        ImGui::Text("Camera Position:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(UNPACK_COLOR4(gfx::color("#f44f41"))), "X: %0.f", cam->camPos.x);
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(UNPACK_COLOR4(gfx::color("#56f441"))), "Y: %0.f", cam->camPos.y);
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(UNPACK_COLOR4(gfx::color("#42cef4"))), "Z: %0.f", cam->camPos.z);
         ImGui::Separator();
         ImGui::Checkbox("Lighting", &lightingEnabled);
         ImGui::Checkbox("World Gen", &worldGenEnabled);

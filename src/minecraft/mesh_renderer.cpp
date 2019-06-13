@@ -1,9 +1,10 @@
 #include "mesh_renderer.hpp"
+#include "../models/foliage.hpp"
 #include <iostream>
 
 namespace minecraft
 {
-    MeshRenderer::MeshRenderer()
+    MeshRenderer::MeshRenderer() : foliageData()
     {
         chunkData = new gfx::v_buffer<BlockVertex>();
     }
@@ -16,6 +17,11 @@ namespace minecraft
     void MeshRenderer::Draw()
     {
         chunkData->Draw();
+        // DRAW FOLIAGE
+        for (int i = 0; i < foliageData.size(); i++)
+        {
+            foliageData[i].Draw(GL_UNSIGNED_INT);
+        }
     }
 
     void MeshRenderer::Update()
@@ -35,7 +41,7 @@ namespace minecraft
         switch(type)
         {
         case BlockType::Grass:
-            return {0, 1, 2};
+            return {1, 1, 2};
         case BlockType::Dirt:
             return {2, 2, 2};
         case BlockType::Stone:
@@ -48,15 +54,52 @@ namespace minecraft
             return {7, 7, 7};
         case BlockType::Sand:
             return {8, 8, 8};
+        case BlockType::Rose:
+            return {9, 9, 9};
+        case BlockType::TallGrass:
+            return {10, 10, 10};
+        case BlockType::Dandelion:
+            return {11, 11, 11};
+        case BlockType::DeadBush:
+            return {12, 12, 12};
         default:
             return {0, 0, 0};
+        }
+    }
+
+    bool IsFoliage(BlockType type)
+    {
+        switch(type)
+        {
+        case BlockType::Rose:
+            return true;
+        case BlockType::TallGrass:
+            return true;
+        case BlockType::Dandelion:
+            return true;
+        case BlockType::DeadBush:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    bool IsAir(BlockType type)
+    {
+        if (IsFoliage(type)) return true;
+        switch(type)
+        {
+        case BlockType::Air:
+            return true;
+        default:
+            return false;
         }
     }
 
     typedef Octree<BlockChunkData> edge;
     bool MeshRenderer::CheckPlane(Octree<BlockChunkData>* root, glm::vec3 direction)
     {
-        if (!root->divided) return root->data.type == BlockType::Air;
+        if (!root->divided) return IsAir(root->data.type);
         for (int x = 0; x < 2; x++)
         {
             for (int y = 0; y < 2; y++)
@@ -67,7 +110,7 @@ namespace minecraft
                     edge* node = root->GetChild(x, y, z);
                     bool nodeCheck = false;
                     if (node->divided) nodeCheck = CheckPlane(node, direction);
-                    else nodeCheck = node->data.type == BlockType::Air;
+                    else nodeCheck = IsAir(node->data.type);
                     if (nodeCheck)
                     {
                         return true;
@@ -88,13 +131,14 @@ namespace minecraft
         int yi = path.y;
         int zi = path.z;
         int c = CHUNK_SIZE / 2;
-        while (c > res / 2)
+        while (c > 1)
         {
             if (!ptr->divided) return ptr;
             int octX = (xi >= c) ? 1 : 0; if (xi >= c) xi -= c;
             int octY = (yi >= c) ? 1 : 0; if (yi >= c) yi -= c;
             int octZ = (zi >= c) ? 1 : 0; if (zi >= c) zi -= c;
             ptr = ptr->GetChild(octX, octY, octZ);
+            if (ptr->dim <= res) return ptr;
             if (c > 1) c /= 2;
             else c = 0;
         }
@@ -112,7 +156,7 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.x + direction * node->dim;
-            if (actualD < 0 && direction == -1 || actualD > CHUNK_SIZE - 1 && direction == 1) continue;
+            if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE - 1 && direction == 1)) continue;
             glm::vec3 actualPath = glm::vec3(actualD, path.y, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
@@ -122,7 +166,7 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.y + direction * node->dim;
-            if (actualD < 0 && direction == -1 || actualD > CHUNK_SIZE - 1 && direction == 1) continue;
+            if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE - 1 && direction == 1)) continue;
             glm::vec3 actualPath = glm::vec3(path.x, actualD, path.z);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
@@ -132,7 +176,7 @@ namespace minecraft
         {
             int direction = (2 * d) - 1;
             float actualD = path.z + direction * node->dim;
-            if (actualD < 0 && direction == -1 || actualD > CHUNK_SIZE - 1 && direction == 1) continue;
+            if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE - 1 && direction == 1)) continue;
             glm::vec3 actualPath = glm::vec3(path.x, path.y, actualD);
             // FIND PATH
             edge* foundPath = FindPath(node, actualPath, node->dim);
@@ -145,7 +189,20 @@ namespace minecraft
     void MeshRenderer::RenderOctree(glm::vec3 offset, Octree<BlockChunkData>* tree, int outsideFlags)
     {
         Octree<BlockChunkData>* ptr = tree;
-        if (!ptr->divided && ptr->data.type == BlockType::Air) return;
+        if (!ptr->divided && IsFoliage(ptr->data.type))
+        {
+            float foliageVertices[] = FOLIAGE_VERTICES(ptr->GetPath().x, ptr->GetPath().y, ptr->GetPath().z, GetAtlasIndex(ptr->data.type).side, 1);
+            gfx::iv_buffer<> foliage = gfx::iv_buffer<>(foliage_data::indices, ARRAYSIZE(foliage_data::indices), foliageVertices, ARRAYSIZE(foliageVertices), []() {
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)0);
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(3 * sizeof(float)));
+                glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(6 * sizeof(float)));
+                glEnableVertexAttribArray(0);
+                glEnableVertexAttribArray(1);
+                glEnableVertexAttribArray(2);
+            });
+            foliageData.push_back(foliage);
+        }
+        else if (!ptr->divided && IsAir(ptr->data.type)) return;
         else if (!ptr->divided)
         {
             if ((outsideFlags & (int)OutsideFlags::NX) == (int)OutsideFlags::NX) LeftFace(offset, GetAtlasIndex(ptr->data.type).side, ptr->dim);
@@ -172,7 +229,7 @@ namespace minecraft
         }
     }
 
-    const glm::vec3 LeftFaceData[4] = {
+    glm::vec3 LeftFaceData[4] = {
         glm::vec3(0.0, 0.0, 0.0),
         glm::vec3(0.0, 0.0, 1.0),
         glm::vec3(0.0, 1.0, 1.0),
@@ -183,7 +240,7 @@ namespace minecraft
         Face(LeftFaceData, glm::vec3(-1, 0, 0), origin, atlasIndex, scale);
     }
 
-    const glm::vec3 RightFaceData[4] = {
+    glm::vec3 RightFaceData[4] = {
         glm::vec3(1.0, 0.0, 1.0),
         glm::vec3(1.0, 0.0, 0.0),
         glm::vec3(1.0, 1.0, 0.0),
@@ -194,7 +251,7 @@ namespace minecraft
         Face(RightFaceData, glm::vec3(1, 0, 0), origin, atlasIndex, scale);
     }
 
-    const glm::vec3 FrontFaceData[4] = {
+    glm::vec3 FrontFaceData[4] = {
         glm::vec3(0.0, 0.0, 1.0),
         glm::vec3(1.0, 0.0, 1.0),
         glm::vec3(1.0, 1.0, 1.0),
@@ -205,7 +262,7 @@ namespace minecraft
         Face(FrontFaceData, glm::vec3(0, 0, 1), origin, atlasIndex, scale);
     }
 
-    const glm::vec3 BackFaceData[4] = {
+    glm::vec3 BackFaceData[4] = {
         glm::vec3(1.0, 0.0, 0.0),
         glm::vec3(0.0, 0.0, 0.0),
         glm::vec3(0.0, 1.0, 0.0),
@@ -216,7 +273,7 @@ namespace minecraft
         Face(BackFaceData, glm::vec3(0, 0, -1), origin, atlasIndex, scale);
     }
 
-    const glm::vec3 TopFaceData[4] = {
+    glm::vec3 TopFaceData[4] = {
         glm::vec3(0.0, 1.0, 1.0),
         glm::vec3(1.0, 1.0, 1.0),
         glm::vec3(1.0, 1.0, 0.0),
@@ -227,7 +284,7 @@ namespace minecraft
         Face(TopFaceData, glm::vec3(0, 1, 0), origin, atlasIndex, scale);
     }
 
-    const glm::vec3 BottomFaceData[4] = {
+    glm::vec3 BottomFaceData[4] = {
         glm::vec3(0.0, 0.0, 0.0),
         glm::vec3(1.0, 0.0, 0.0),
         glm::vec3(1.0, 0.0, 1.0),
@@ -238,7 +295,7 @@ namespace minecraft
         Face(BottomFaceData, glm::vec3(0, -1, 0), origin, atlasIndex, scale);
     }
 
-    void MeshRenderer::Face(const glm::vec3 p[4], glm::vec3 normal, glm::vec3 origin, int atlasIndex, int scale)
+    void MeshRenderer::Face(glm::vec3 p[4], glm::vec3 normal, glm::vec3 origin, int atlasIndex, int scale)
     {
         chunkData->PushBack(BlockVertex(
             p[0] * glm::vec3(scale) + origin,

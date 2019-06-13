@@ -1,5 +1,6 @@
 #pragma once
 #include "chunk.hpp"
+#include "../gfx/iv_buffer.hpp"
 #include "../gfx/v_buffer.hpp"
 
 namespace minecraft
@@ -30,6 +31,7 @@ namespace minecraft
         AtlasIndex GetAtlasIndex(BlockType type);
 
         gfx::v_buffer<BlockVertex>* chunkData;
+        std::vector<gfx::iv_buffer<>> foliageData;
     private:
         bool CheckPlane(Octree<BlockChunkData>* root, glm::vec3 direction);
         int EdgeOccupancy(Octree<BlockChunkData>* node, glm::vec3 coords);
@@ -41,6 +43,6 @@ namespace minecraft
         void BackFace(glm::vec3 origin, int atlasIndex, int scale);
         void TopFace(glm::vec3 origin, int atlasIndex, int scale);
         void BottomFace(glm::vec3 origin, int atlasIndex, int scale);
-        void Face(const glm::vec3 p[4], glm::vec3 normal, glm::vec3 origin, int atlasIndex, int scale);
+        inline void Face(glm::vec3 p[4], glm::vec3 normal, glm::vec3 origin, int atlasIndex, int scale);
     };
 }
