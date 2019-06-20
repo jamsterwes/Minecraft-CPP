@@ -191,7 +191,11 @@ namespace minecraft
         Octree<BlockChunkData>* ptr = tree;
         if (!ptr->divided && IsFoliage(ptr->data.type))
         {
-            float foliageVertices[] = FOLIAGE_VERTICES(ptr->GetPath().x, ptr->GetPath().y, ptr->GetPath().z, GetAtlasIndex(ptr->data.type).side, 1);
+            float fv_x = offset.x;
+            float fv_y = offset.y;
+            float fv_z = offset.z;
+            auto idx = GetAtlasIndex(ptr->data.type).side;
+            float foliageVertices[] = FOLIAGE_VERTICES(fv_x, fv_y, fv_z, idx, 1);
             gfx::iv_buffer<> foliage = gfx::iv_buffer<>(foliage_data::indices, ARRAYSIZE(foliage_data::indices), foliageVertices, ARRAYSIZE(foliageVertices), []() {
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)0);
                 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 10 * sizeof(float), (void*)(3 * sizeof(float)));
