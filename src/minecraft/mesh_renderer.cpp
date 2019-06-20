@@ -41,7 +41,7 @@ namespace minecraft
         switch(type)
         {
         case BlockType::Grass:
-            return {1, 1, 2};
+            return {0, 1, 2};
         case BlockType::Dirt:
             return {2, 2, 2};
         case BlockType::Stone:

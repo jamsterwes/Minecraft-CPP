@@ -56,7 +56,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {1, 1};
+int ChunkDim[2] = {3, 1};
 int chunkCount = ChunkDim[0] * ChunkDim[1];
 
 int octaves = 7;
@@ -380,9 +380,9 @@ const char* renderModes = "Lit\0Position (G-Buffer)\0Normal (G-Buffer)\0Albedo (
 int chosenRenderMode = 0;
 
 int ssaoBlurRadius = 2;
-float ssaoRadius = 3.156f;
-float ssaoBias = 0.217f;
-float ssaoPower = 0.125f;
+float ssaoRadius = 2.254f;
+float ssaoBias = 0.384f;
+float ssaoPower = 0.254f;
 int ssaoSamples = 64;
 bool lightingEnabled = false;
 bool worldGenEnabled = false;
