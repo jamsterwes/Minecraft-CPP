@@ -152,38 +152,58 @@ namespace minecraft
         // CULL COUSINS
         glm::vec3 path = node->GetPath();
 
-        for (int d = 0; d < 2; d++)
-        {
-            int direction = (2 * d) - 1;
-            float actualD = path.x + direction * node->dim;
-            if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE - 1 && direction == 1)) continue;
-            glm::vec3 actualPath = glm::vec3(actualD, path.y, path.z);
-            // FIND PATH
-            edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!CheckPlane(foundPath, glm::vec3(direction, 0.0, 0.0))) cull ^= (int)(direction == -1 ? OutsideFlags::NX : OutsideFlags::PX);
-        }
-        for (int d = 0; d < 2; d++)
-        {
-            int direction = (2 * d) - 1;
-            float actualD = path.y + direction * node->dim;
-            if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE - 1 && direction == 1)) continue;
-            glm::vec3 actualPath = glm::vec3(path.x, actualD, path.z);
-            // FIND PATH
-            edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!CheckPlane(foundPath, glm::vec3(0.0, direction, 0.0))) cull ^= (int)(direction == -1 ? OutsideFlags::NY : OutsideFlags::PY);
-        }
-        for (int d = 0; d < 2; d++)
-        {
-            int direction = (2 * d) - 1;
-            float actualD = path.z + direction * node->dim;
-            if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE - 1 && direction == 1)) continue;
-            glm::vec3 actualPath = glm::vec3(path.x, path.y, actualD);
-            // FIND PATH
-            edge* foundPath = FindPath(node, actualPath, node->dim);
-            if (!CheckPlane(foundPath, glm::vec3(0.0, 0.0, direction))) cull ^= (int)(direction == -1 ? OutsideFlags::NZ : OutsideFlags::PZ);
-        }
+        // for (int d = 0; d < 2; d++)
+        // {
+        //     int direction = d ? -1 : 1;
+        //     float actualD = path.x + direction * node->dim;
+        //     if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE && direction == 1)) continue;
+        //     glm::vec3 actualPath = glm::vec3(actualD, path.y, path.z);
+        //     // FIND PATH
+        //     edge* foundPath = FindPath(node, actualPath, node->dim);
+        //     if (!CheckPlane(foundPath, glm::vec3(direction, 0.0, 0.0))) cull ^= (int)(direction == -1 ? OutsideFlags::NX : OutsideFlags::PX);
+        // }
+        // for (int d = 0; d < 2; d++)
+        // {
+        //     int direction = d ? -1 : 1;
+        //     float actualD = path.y + direction * node->dim;
+        //     if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE && direction == 1)) continue;
+        //     glm::vec3 actualPath = glm::vec3(path.x, actualD, path.z);
+        //     // FIND PATH
+        //     edge* foundPath = FindPath(node, actualPath, node->dim);
+        //     if (!CheckPlane(foundPath, glm::vec3(0.0, direction, 0.0))) cull ^= (int)(direction == -1 ? OutsideFlags::NY : OutsideFlags::PY);
+        // }
+        // for (int d = 0; d < 2; d++)
+        // {
+        //     int direction = d ? -1 : 1;
+        //     float actualD = path.z + direction * node->dim;
+        //     if ((actualD <= 0 && direction == -1) || (actualD >= CHUNK_SIZE && direction == 1)) continue;
+        //     glm::vec3 actualPath = glm::vec3(path.x, path.y, actualD);
+        //     // FIND PATH
+        //     edge* foundPath = FindPath(node, actualPath, node->dim);
+        //     if (!CheckPlane(foundPath, glm::vec3(0.0, 0.0, direction))) cull ^= (int)(direction == -1 ? OutsideFlags::NZ : OutsideFlags::PZ);
+        // }
 
         return cull;
+    }
+
+    // void MeshRenderer::SelectFaces(glm::vec3 offset, int dim, int outsideFlags)
+    // {    
+    //     if (outsideFlags & (int)OutsideFlags::NX) LeftFace(offset, GetAtlasIndex(ptr->data.type).side, dim);
+    //     if (outsideFlags & (int)OutsideFlags::PX) RightFace(offset, GetAtlasIndex(ptr->data.type).side, dim);
+    //     if (outsideFlags & (int)OutsideFlags::PZ) FrontFace(offset, GetAtlasIndex(ptr->data.type).side, dim);
+    //     if (outsideFlags & (int)OutsideFlags::NZ) BackFace(offset, GetAtlasIndex(ptr->data.type).side, dim);
+    //     if (outsideFlags & (int)OutsideFlags::PY) TopFace(offset, GetAtlasIndex(ptr->data.type).top, dim);
+    //     if (outsideFlags & (int)OutsideFlags::NY) BottomFace(offset, GetAtlasIndex(ptr->data.type).bottom, dim);
+    // }
+
+    void MeshRenderer::DBG_SelectFaces(glm::vec3 offset, int dim, int outsideFlags)
+    {
+        LeftFace(offset, (outsideFlags & (int)OutsideFlags::NX) ? 0u : 1u, dim);
+        RightFace(offset, (outsideFlags & (int)OutsideFlags::PX) ? 0u : 1u, dim);
+        FrontFace(offset, (outsideFlags & (int)OutsideFlags::PZ) ? 0u : 1u, dim);
+        BackFace(offset, (outsideFlags & (int)OutsideFlags::NZ) ? 0u : 1u, dim);
+        TopFace(offset, (outsideFlags & (int)OutsideFlags::PY) ? 0u : 1u, dim);
+        BottomFace(offset, (outsideFlags & (int)OutsideFlags::NY) ? 0u : 1u, dim);
     }
 
     void MeshRenderer::RenderOctree(glm::vec3 offset, Octree<BlockChunkData>* tree, int outsideFlags)
@@ -209,12 +229,8 @@ namespace minecraft
         else if (!ptr->divided && IsAir(ptr->data.type)) return;
         else if (!ptr->divided)
         {
-            if ((outsideFlags & (int)OutsideFlags::NX) == (int)OutsideFlags::NX) LeftFace(offset, GetAtlasIndex(ptr->data.type).side, ptr->dim);
-            if ((outsideFlags & (int)OutsideFlags::PX) == (int)OutsideFlags::PX) RightFace(offset, GetAtlasIndex(ptr->data.type).side, ptr->dim);
-            if ((outsideFlags & (int)OutsideFlags::PZ) == (int)OutsideFlags::PZ) FrontFace(offset, GetAtlasIndex(ptr->data.type).side, ptr->dim);
-            if ((outsideFlags & (int)OutsideFlags::NZ) == (int)OutsideFlags::NZ) BackFace(offset, GetAtlasIndex(ptr->data.type).side, ptr->dim);
-            if ((outsideFlags & (int)OutsideFlags::PY) == (int)OutsideFlags::PY) TopFace(offset, GetAtlasIndex(ptr->data.type).top, ptr->dim);
-            if ((outsideFlags & (int)OutsideFlags::NY) == (int)OutsideFlags::NY) BottomFace(offset, GetAtlasIndex(ptr->data.type).bottom, ptr->dim);
+            // SelectFaces(offset, ptr, outsideFlags);
+            DBG_SelectFaces(offset, ptr->dim, outsideFlags);
         }
         else
         {

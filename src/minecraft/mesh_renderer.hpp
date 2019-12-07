@@ -44,5 +44,9 @@ namespace minecraft
         void TopFace(glm::vec3 origin, int atlasIndex, int scale);
         void BottomFace(glm::vec3 origin, int atlasIndex, int scale);
         inline void Face(glm::vec3 p[4], glm::vec3 normal, glm::vec3 origin, int atlasIndex, int scale);
+    
+        // void AllSelectFaces(glm::vec3 offset, Octree<BlockChunkData>* tree, int outsideFlags);
+        // DEBUG
+        void DBG_SelectFaces(glm::vec3 offset, int dim, int outsideFlags);
     };
 }

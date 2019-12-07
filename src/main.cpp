@@ -56,7 +56,7 @@ bool CheckProbability(float probability)
     return ((float)(rand() % 100000) / 100000.0) < probability;
 }
 
-int ChunkDim[2] = {3, 1};
+int ChunkDim[2] = {1, 1};
 int chunkCount = ChunkDim[0] * ChunkDim[1];
 
 int octaves = 7;
@@ -65,7 +65,7 @@ float lacunarity = 0.015;
 float bias = -0.493f;
 float upperScale = 0.974f;
 float lowerScale = 0.00f;
-int noiseBase = 80;
+int noiseBase = 30;
 float treeProb = 0.049f;
 bool wireframe = false;
 
